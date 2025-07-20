@@ -83,14 +83,15 @@ body {
 /* Main App Container */
 #app {
   width: 100%;
-  max-width: 1200px;
-  /* 980px에서 1200px로 증가 */
+  max-width: 1600px;
+  /* 1200px에서 1600px로 크게 증가 */
   margin: 0 auto;
   background: #fff;
   border-radius: 28px;
   box-shadow: 0 16px 48px rgba(60, 60, 120, 0.16),
     0 4px 16px rgba(90, 209, 230, 0.10);
-  padding: 56px 80px 40px 80px;
+  padding: 56px 120px 40px 120px;
+  /* 좌우 패딩을 80px에서 120px로 증가 */
   min-height: 650px;
   position: relative;
   z-index: 1;
@@ -159,8 +160,10 @@ body {
   font-weight: 600;
   box-shadow: 0 2px 8px rgba(108, 99, 255, 0.15);
   transition: all 0.2s ease;
-  min-width: 180px;
-  padding: 14px 28px;
+  min-width: 220px;
+  /* 180px에서 220px로 증가 */
+  padding: 16px 32px;
+  /* 14px 28px에서 16px 32px로 증가 */
   font-size: 1.1em;
 }
 
@@ -172,9 +175,12 @@ body {
 
 .filter-btn {
   flex: 1;
-  min-width: 140px;
-  max-width: 180px;
-  padding: 12px 20px;
+  min-width: 180px;
+  /* 140px에서 180px로 증가 */
+  max-width: 220px;
+  /* 180px에서 220px로 증가 */
+  padding: 12px 24px;
+  /* 패딩 증가 */
   font-size: 1em;
   margin: 4px !important;
   transition: all 0.3s ease !important;
@@ -229,6 +235,18 @@ body {
 .search-container {
   margin: 16px 0 !important;
   width: 100% !important;
+}
+
+/* Filter Tabs */
+.filter-tabs {
+  display: flex;
+  gap: 25px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 1000px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .search-container .mdl-textfield__input {
@@ -316,12 +334,21 @@ select:focus {
 .todo-form {
   margin-bottom: 28px;
   align-items: flex-end;
-  gap: 18px;
+  gap: 30px;
+  /* 18px에서 30px로 간격 증가 */
+  justify-content: center;
+  /* 가운데 정렬 추가 */
+  max-width: 1200px;
+  /* 최대 너비 설정 */
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .date-field input[type="date"] {
-  min-width: 140px;
-  padding-left: 90px;
+  min-width: 180px;
+  /* 140px에서 180px로 증가 */
+  padding-left: 100px;
+  /* 90px에서 100px로 증가 */
   text-align: left;
   font-size: 16px;
   height: 42px;
@@ -331,7 +358,8 @@ select:focus {
 
 .date-field .mdl-textfield__label {
   left: 0;
-  width: 80px;
+  width: 90px;
+  /* 80px에서 90px로 증가 */
   text-align: left;
   font-size: 16px;
   line-height: 42px;
@@ -380,6 +408,10 @@ select:focus {
   display: flex;
   flex-direction: column;
   gap: 18px;
+  max-width: 1200px;
+  /* 최대 너비 설정 */
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .todo-item {
@@ -925,8 +957,10 @@ select:focus {
   letter-spacing: 0.25px !important;
   transition: all 0.3s ease !important;
   box-shadow: 0 1px 3px rgba(60, 64, 67, 0.3) !important;
-  min-width: 200px !important;
-  padding: 12px 24px !important;
+  min-width: 250px !important;
+  /* 200px에서 250px로 증가 */
+  padding: 14px 28px !important;
+  /* 12px 24px에서 14px 28px로 증가 */
   font-size: 1em !important;
 }
 
