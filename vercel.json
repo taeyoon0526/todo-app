@@ -20,7 +20,7 @@
       "destination": "/api/$1"
     },
     {
-      "source": "/((?!api|scripts|styles\\.css|sw\\.js|.*\\.(js|css|png|jpg|jpeg|gif|ico|svg|webp|woff|woff2|ttf|eot)).*)",
+      "source": "/(.*)",
       "destination": "/index.html"
     }
   ],
