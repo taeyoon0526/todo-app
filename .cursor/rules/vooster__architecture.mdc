@@ -1,0 +1,151 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+# 기술 요구 사항 문서 (TRD)
+
+## 1. Executive Technical Summary
+- **프로젝트 개요**  
+  간단하고 직관적인 웹 기반 TODO-LIST 서비스로, Vanilla JS와 Supabase를 활용하여 작업 CRUD, 필터, 알림 등 핵심 기능을 1초 이내 로드·100ms 이내 상호작용으로 구현합니다. Vercel을 통한 정적 리소스 호스팅과 Supabase의 인증·데이터베이스·실시간 기능을 결합해 최소한의 운영 비용으로 안정적인 서비스 제공을 목표로 합니다.
+
+- **핵심 기술 스택**  
+  • Frontend: HTML/CSS/Vanilla JS + Material Design Lite  
+  • Backend: Supabase(Postgres, Auth, Realtime)  
+  • Hosting: Vercel + CDN Edge Network  
+  • Notification: Service Worker + Notification API
+
+- **주요 기술 목표**  
+  • 최초 화면 LCP 1s 이하 달성  
+  • UI 상호작용 응답 100ms 이하  
+  • 동시 접속자 10만 이상 대응  
+  • 99.9% 이상 가용성 보장
+
+- **주요 가정**  
+  • 사용자 데이터는 Supabase Postgres에 저장 및 RLS로 보호  
+• 인증은 Supabase Auth(이메일+아이디+비밀번호 회원가입/로그인, Google OAuth)로 제공하며, 기본은 이메일 기반 인증
+  • PWA 오프라인 기능 구현은 Phase2 이후 진행  
+
+## 2. Tech Stack
+
+| Category           | Technology / Library               | Reasoning (선택 이유)                                               |
+| ------------------ | ---------------------------------- | ------------------------------------------------------------------- |
+| Frontend Framework | Vanilla JS + HTML/CSS              | 경량·빠른 초기 로드, 복잡도 최소화                                  |
+| UI 컴포넌트        | Material Design Lite               | 직관적 디자인, 추가 커스터마이징 없이 빠른 UI 구축                  |
+| 상태 관리          | 브라우저 내장 state                | 간단한 작업 리스트에 별도 라이브러리 불필요                           |
+| 데이터베이스       | Supabase Postgres                  | 오토스케일, 실시간 업데이트, RLS 지원                               |
+| 인증               | Supabase Auth (Email, Username, Password, Google OAuth) | 이메일/아이디 기반 회원가입 및 로그인, 추가적으로 Google OAuth 제공, JWT 기반 보안 |
+| 실시간 통신        | Supabase Realtime                  | WebSocket 기반 실시간 작업 동기화                                    |
+| 알림(푸시)         | Service Worker + Notification API  | 브라우저 및 PWA 푸시 지원                                           |
+| 날짜 처리          | Day.js (CDN)                       | 손쉬운 D-Day 계산                                                    |
+| 통계 차트          | Chart.js (CDN)                     | 가벼운 차트 라이브러리, 기본 통계 시각화                             |
+| 호스팅/배포        | Vercel                             | Git 연동 CI/CD, 글로벌 CDN                                           |
+| 코드 품질          | ESLint (Optional)                  | 코드 일관성 유지 (Vanilla JS 프로젝트에서 선택적 적용)               |
+
+## 3. System Architecture Design
+
+### Top-Level building blocks
+- Client (브라우저/PWA)  
+  • UI 렌더링, 사용자 입력 처리, Service Worker 등록  
+  • Supabase JS SDK를 통한 인증·데이터 조회/수정  
+- Backend (Supabase)  
+  • Postgres DB · Realtime · Auth · Storage  
+  • Row-level Security, Cloud Function(RPC)  
+- CDN & Hosting (Vercel)  
+  • 정적 자산 호스팅, 자동 빌드·배포, 글로벌 엣지 캐싱  
+- Notification Service  
+  • Service Worker가 Notification API 호출  
+  • 마감 1시간·하루 전 브라우저 푸시
+
+### Top-Level Component Interaction Diagram
+```mermaid
+graph TD
+  Client[브라우저(PWA)] -->|Auth/API| Auth[Supabase Auth]
+  Client -->|CRUD/Realtime| DB[Supabase Postgres]
+  Client -->|Realtime| Realtime[Supabase Realtime]
+  Client -->|푸시 등록| SW[Service Worker]
+  SW -->|Notification API| Client
+```
+- 브라우저가 Supabase Auth를 통해 로그인/토큰 획득  
+- 동일한 브라우저에서 Supabase JS SDK로 CRUD/API 호출  
+- Realtime 구독으로 다른 기기 변경 사항 즉시 반영  
+- Service Worker가 푸시 등록·수신 후 Notification API 호출
+
+### Code Organization & Convention
+
+**Domain-Driven Organization Strategy**  
+- Domain Separation: `auth`, `tasks`, `notifications` 등 도메인별 폴더  
+- Layer-Based Architecture: Presentation(UI), Business Logic(도메인 서비스), Data Access(Supabase Client)  
+- Feature-Based Modules: 각 도메인 내 기능별 파일 구성  
+- Shared Components: `utils.js`, `api.js`, `constants.js` 등 공통 모듈
+
+**Universal File & Folder Structure**
+```
+/
+├── index.html
+├── styles.css
+├── sw.js
+├── scripts
+│   ├── auth.js
+│   ├── tasks.js
+│   ├── notifications.js
+│   ├── api.js
+│   └── utils.js
+├── assets
+│   └── icons/
+└── libs
+    ├── dayjs.min.js
+    └── chart.min.js
+```
+
+### Data Flow & Communication Patterns
+- **Client-Server Communication**: Supabase JS SDK 통한 REST/RPC 호출  
+- **Database Interaction**: Supabase Postgres에 RLS 적용, SQL RPC for 복잡 쿼리  
+- **User Authentication Flow**: Supabase Auth를 활용하여 이메일, 아이디, 비밀번호 기반 회원가입/로그인 지원, 추가적으로 Google OAuth 통합  
+- **Real-time Communication**: Supabase Realtime 채널 구독  
+- **Data Synchronization**: 브라우저 로컬 캐시 + Realtime 이벤트로 동기화
+
+## 4. Performance & Optimization Strategy
+- 정적 자산 CDN 캐싱 헤더 설정(immutable, max-age)  
+- 필요 리소스만 로드하는 최소화된 `<script>` 구조  
+- Day.js/Chart.js CDN 서브리소스 병렬 로드  
+- Service Worker로 오프라인 캐시 및 네트워크 우선 정책  
+
+## 5. Implementation Roadmap & Milestones
+
+### Phase 1: Foundation (MVP Implementation)
+- **Core Infrastructure**: Supabase 프로젝트 생성, Vercel 배포 설정  
+- **Essential Features**: 작업 CRUD, 완료 체크, 마감일·우선순위, ‘오늘·이번 주·전체’ 필터, 기본 알림  
+- **Basic Security**: HTTPS, Supabase JWT Auth, RLS 정책  
+- **Development Setup**: Git 레포, 브랜치 모델, Vercel CI/CD  
+- **Timeline**: 0~2개월
+
+### Phase 2: Feature Enhancement
+- **Advanced Features**: 반복 작업(cron UI), 카테고리/태그, 달력 뷰, 다크 모드, PWA 오프라인  
+- **Performance Optimization**: 코드 스플리팅, 이미지 최적화  
+- **Enhanced Security**: CSP, 추가 RLS 규칙, CSRF 방어  
+- **Monitoring Implementation**: Supabase Logs, Vercel Analytics  
+- **Timeline**: 2~4개월
+
+### Phase 3: Scaling & Optimization
+- **Scalability Implementation**: Supabase 오토스케일, edge functions 활용  
+- **Advanced Integrations**: 프리미엄 구독 결제, 협업 권한 관리  
+- **Enterprise Features**: 공유 URL, 읽기/쓰기 권한 분리  
+- **Compliance & Auditing**: GDPR·정보보안 표준 대응  
+- **Timeline**: 4~6개월
+
+## 6. Risk Assessment & Mitigation Strategies
+
+### Technical Risk Analysis
+- **Technology Risks**: Service Worker 브라우저별 호환성 차이 → FCM 폴백, 이메일 알림  
+- **Performance Risks**: Realtime 구독 과다 → 적절한 구독 분리, 배치 처리  
+- **Security Risks**: XSS/CSRF 공격 → CSP, Supabase RLS 강화  
+- **Integration Risks**: Supabase 장애 시 데이터 접근 차단 → 로컬 캐시 폴백, 장애 모니터링  
+- **Mitigation Strategies**: 폴백 경로 설계, 정기 부하 테스트, 보안 감사
+
+### Project Delivery Risks
+- **Timeline Risks**: 외부 API 지연 → 기본 기능 우선 개발, Mock 데이터 활용  
+- **Resource Risks**: Vanilla JS 경험 부족 → 기술 워크숍, 샘플 코드 제공  
+- **Quality Risks**: 테스트 부족 → 유닛·통합 테스트 스크립트 추가  
+- **Deployment Risks**: Vercel 빌드 실패 → 로컬 CI, 복구용 이전 배포 버전 유지  
+- **Contingency Plans**: 핵심 기능 집중, Phase 조정 및 외부 컨설팅 활용
