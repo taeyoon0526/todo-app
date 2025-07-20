@@ -1,3 +1,14 @@
+/**
+ * TODO-LIST Application - API Client
+ * 
+ * Copyright (c) 2025 taeyoon0526
+ * Licensed under Shared Source License
+ * 
+ * This software is provided for viewing and educational purposes only.
+ * Modification, redistribution, and commercial use are prohibited.
+ * See LICENSE file for full terms and conditions.
+ */
+
 // scripts/api.js
 // Supabase 클라이언트 초기화 (환경변수 사용)
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";

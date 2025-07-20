@@ -5,9 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "python -m http.server 8000",
-    "build": "echo 'No build step needed for static files'",
+    "build": "echo 'Static build complete - no bundling needed'",
     "start": "python -m http.server 8000",
-    "deploy": "vercel --prod"
+    "preview": "python -m http.server 8080",
+    "deploy": "vercel --prod",
+    "test": "echo 'Tests will be added in future iterations'"
   },
   "keywords": [
     "todo",
@@ -17,7 +19,7 @@
     "material-design"
   ],
   "author": "taeyoon0526",
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "dependencies": {},
   "devDependencies": {},
   "engines": {

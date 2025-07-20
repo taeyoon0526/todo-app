@@ -1,3 +1,14 @@
+/**
+ * TODO-LIST Application - Styles
+ * 
+ * Copyright (c) 2025 taeyoon0526
+ * Licensed under Shared Source License
+ * 
+ * This software is provided for viewing and educational purposes only.
+ * Modification, redistribution, and commercial use are prohibited.
+ * See LICENSE file for full terms and conditions.
+ */
+
 /* Reset & Base */
 * {
   box-sizing: border-box;
@@ -27,6 +38,21 @@ body {
   left: 0;
   right: 0;
   z-index: 1000;
+}
+
+/* 로그아웃 버튼 스타일 */
+.logout-btn {
+  display: none !important;
+  color: white !important;
+  transition: opacity 0.3s ease;
+}
+
+.logout-btn:hover {
+  opacity: 0.8;
+}
+
+.logout-btn.visible {
+  display: inline-flex !important;
 }
 
 .mdl-layout__content {
@@ -183,6 +209,18 @@ body {
   color: white !important;
 }
 
+/* 완료 보기 토글 버튼 */
+#toggle-completed {
+  background: #28a745 !important;
+  color: white !important;
+  transition: all 0.3s ease;
+}
+
+#toggle-completed[data-toggle="true"] {
+  background: #dc3545 !important;
+  color: white !important;
+}
+
 /* TODO Form */
 .todo-form {
   margin-bottom: 28px;
@@ -292,6 +330,16 @@ body {
   text-decoration: line-through;
 }
 
+/* 완료된 항목 전체 스타일 */
+.todo-item.completed {
+  opacity: 0.7;
+  background-color: #f8f9fa;
+}
+
+.todo-item.completed .todo-content {
+  opacity: 0.8;
+}
+
 .todo-meta {
   display: flex;
   gap: 12px;
@@ -305,11 +353,55 @@ body {
   color: #1976d2;
   padding: 2px 8px;
   border-radius: 12px;
+  font-weight: 500;
+  font-size: 0.85rem;
 }
 
-.todo-due.overdue {
+/* D-Day 상태별 스타일 */
+.todo-due.dday-today {
+  background: #ffeb3b;
+  color: #f57f17;
+  font-weight: 700;
+  animation: pulse 2s infinite;
+}
+
+.todo-due.dday-urgent {
   background: #ffebee;
   color: #d32f2f;
+  font-weight: 600;
+}
+
+.todo-due.dday-soon {
+  background: #fff3e0;
+  color: #f57c00;
+  font-weight: 500;
+}
+
+.todo-due.dday-normal {
+  background: #e8f5e8;
+  color: #2e7d32;
+}
+
+.todo-due.dday-overdue {
+  background: #ffebee;
+  color: #d32f2f;
+  text-decoration: line-through;
+  opacity: 0.8;
+}
+
+/* D-Day 애니메이션 */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.05);
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
 
 .todo-priority {

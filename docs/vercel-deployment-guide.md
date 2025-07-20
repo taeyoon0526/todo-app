@@ -3,6 +3,17 @@
 ## 개요
 TODO-LIST 애플리케이션을 Vercel에 배포하기 위한 완전한 가이드입니다.
 
+**🚀 앱 아키텍처**: 
+- **프론트엔드**: HTML5 + CSS3 + Vanilla JavaScript (정적 배포)
+- **백엔드**: Supabase (서버리스 데이터베이스 + 인증)
+- **결과**: 완전한 동적 웹 애플리케이션
+
+**✨ 동적 기능들**:
+- 실시간 회원가입/로그인
+- JWT 토큰 기반 인증
+- 실시간 할 일 CRUD 작업
+- 사용자별 데이터 격리 (RLS)
+
 ## 1. Vercel 계정 및 프로젝트 설정
 
 ### 1.1 Vercel 계정 생성
@@ -31,12 +42,15 @@ git push -u origin main
 ### 2.2 프로젝트 설정
 ```
 Project Name: todo-app
-Framework Preset: Other
+Framework Preset: Other (Static Site)
 Root Directory: ./
-Build Command: (비워둠 - 정적 파일)
-Output Directory: (비워둠)
-Install Command: (비워둠)
+Build Command: npm run build (또는 비워둠)
+Output Directory: (비워둠 - 루트 디렉토리 사용)
+Install Command: (비워둠 - 종속성 없음)
 ```
+
+**💡 중요**: 이 앱은 **정적 프론트엔드 + 서버리스 백엔드(Supabase)** 아키텍처로 
+완전한 동적 웹 애플리케이션입니다!
 
 ## 3. 환경변수 설정
 
