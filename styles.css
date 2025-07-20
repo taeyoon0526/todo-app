@@ -400,6 +400,43 @@ select:focus {
   transform: scale(1.05);
 }
 
+/* TODO Card */
+.todo-card {
+  width: 100% !important;
+  min-width: 1400px !important;
+  /* 엄청 넓게 설정 */
+  max-width: 1800px !important;
+  /* 최대 너비도 크게 */
+  min-height: 500px;
+  margin: 0 auto !important;
+  /* 가운데 정렬 */
+  box-shadow: 0 16px 48px rgba(60, 60, 120, 0.16) !important;
+  background: #fafdff !important;
+  border-radius: 24px !important;
+  padding-bottom: 32px !important;
+}
+
+.todo-card .mdl-card__title {
+  background: linear-gradient(135deg, #6c63ff 0%, #5ad1e6 100%) !important;
+  color: white !important;
+  border-radius: 24px 24px 0 0 !important;
+  padding: 48px 120px 32px 120px !important;
+  /* 패딩도 크게 */
+}
+
+.todo-card .mdl-card__title-text {
+  margin: 0 !important;
+  font-size: 1.8rem !important;
+  /* 폰트 크기도 증가 */
+  font-weight: 600 !important;
+  text-align: center !important;
+}
+
+.todo-card .mdl-card__supporting-text {
+  padding: 48px 100px 18px 100px !important;
+  /* 패딩 크게 증가 */
+}
+
 /* TODO List */
 .todo-list {
   list-style: none;
@@ -1009,15 +1046,16 @@ select:focus {
   }
 
   .todo-card {
-    min-width: 500px;
+    min-width: 1200px !important;
+    /* 큰 화면에서도 넓게 유지 */
   }
 
   .todo-card .mdl-card__title {
-    padding: 40px 60px 28px 60px;
+    padding: 40px 80px 28px 80px !important;
   }
 
   .todo-card .mdl-card__supporting-text {
-    padding: 40px 50px 16px 50px;
+    padding: 40px 70px 16px 70px !important;
   }
 }
 
@@ -1027,19 +1065,21 @@ select:focus {
   }
 
   .todo-card {
-    min-width: auto;
+    min-width: auto !important;
+    /* 모바일에서는 자동 조정 */
+    max-width: 100% !important;
   }
 
   .todo-card .mdl-card__title {
-    padding: 32px 40px 24px 40px;
+    padding: 32px 40px 24px 40px !important;
   }
 
   .todo-card .mdl-card__title-text {
-    font-size: 1.4rem;
+    font-size: 1.4rem !important;
   }
 
   .todo-card .mdl-card__supporting-text {
-    padding: 32px 24px 16px 24px;
+    padding: 32px 24px 16px 24px !important;
   }
 }
 
