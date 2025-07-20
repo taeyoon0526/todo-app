@@ -869,6 +869,10 @@ export async function loadTodos(userId) {
       if (confirm("정말 삭제하시겠습니까?")) {
         const { error } = await supabase.from("todos").delete().eq("id", todo.id);
         if (handleAuthError(error)) return;
+        if (error) {
+          alert("삭제 실패: " + error.message);
+          return;
+        }
         await loadTodos(userId);
       }
     });
