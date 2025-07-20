@@ -2,50 +2,129 @@
 import { supabase } from "./api.js";
 
 window.addEventListener("DOMContentLoaded", async () => {
+  // MDL 컴포넌트 업그레이드 확인
+  if (typeof componentHandler !== 'undefined') {
+    componentHandler.upgradeDom();
+  }
+  
+  // 세션 확인
   const {
     data: { session },
   } = await supabase.auth.getSession();
   if (session && session.user) {
     showTodoApp(session.user.id);
   }
+  
+  // Auth 상태 변화 리스너 추가 (세션 만료 등 자동 처리)
+  supabase.auth.onAuthStateChange((event, session) => {
+    console.log("[DEBUG] Auth state changed:", event, session);
+    
+    if (event === 'SIGNED_IN' && session) {
+      showTodoApp(session.user.id);
+    } else if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED' && !session) {
+      // 로그아웃 또는 세션 만료 시 로그인 화면으로 이동
+      showAuthSection();
+    }
+  });
 });
+
+// 인증 섹션으로 돌아가기
+function showAuthSection() {
+  const authSection = document.getElementById("auth-section");
+  const todoApp = document.getElementById("todo-app");
+  
+  authSection.style.display = "block";
+  todoApp.classList.remove("todo-app-visible");
+  todoApp.classList.add("todo-app-hidden");
+}
 
 // 로그인 성공 시 todo-app 표시 및 할 일 목록 불러오기
 window.addEventListener("login-success", (e) => {
   const userId = e.detail.user.id;
+  console.log("[INFO] 로그인 성공, 메인 화면으로 이동합니다. User ID:", userId);
   showTodoApp(userId);
 });
 
 function showTodoApp(userId) {
-  document.getElementById("todo-app").style.display = "";
-  loadTodos(userId);
+  const authSection = document.getElementById("auth-section");
+  const todoApp = document.getElementById("todo-app");
+  
+  // 빠른 화면 전환 (성능 최적화)
+  authSection.style.display = "none";
+  todoApp.classList.remove("todo-app-hidden");
+  todoApp.classList.add("todo-app-visible");
+  
+  // 할 일 목록 비동기 로드 (UI 차단 방지)
+  loadTodos(userId).catch(error => {
+    console.error("할 일 목록 로드 실패:", error);
+  });
 }
 
 // 공통 에러 처리 함수
 function handleAuthError(error) {
   if (!error) return false;
-  if (error.code === "401" || error.code === "403") {
+  
+  // JWT 토큰 관련 오류 처리
+  if (error.code === "401" || error.code === "403" || 
+      error.message?.includes("JWT") || 
+      error.message?.includes("permission denied") ||
+      error.message?.includes("access_token")) {
+    console.error("[AUTH ERROR]", error);
     alert("세션이 만료되었거나 권한이 없습니다. 다시 로그인 해주세요.");
-    location.reload();
+    // Supabase 세션 정리 및 로그인 화면으로 이동
+    supabase.auth.signOut();
+    showAuthSection();
     return true;
   }
+  
+  // 네트워크 오류
+  if (error.message?.includes("Failed to fetch") || error.message?.includes("NetworkError")) {
+    console.error("[NETWORK ERROR]", error);
+    alert("네트워크 연결을 확인해주세요.");
+    return true;
+  }
+  
   return false;
+}
+
+// 디바운싱 유틸리티
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
+// 로딩 상태 표시
+function showLoading() {
+  const list = document.getElementById("todo-list");
+  list.innerHTML = '<li class="todo-item loading-item">로딩 중...</li>';
 }
 
 // 필터 상태
 let currentFilter = "all";
 
-// 필터 버튼 이벤트
+// 필터 버튼 이벤트 (디바운싱 적용)
 const filterBtns = document.querySelectorAll(".filter-btn");
+const debouncedFilter = debounce(async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session && session.user) {
+    showLoading();
+    await loadTodos(session.user.id);
+  }
+}, 150);
+
 filterBtns.forEach((btn) => {
   btn.addEventListener("click", () => {
     currentFilter = btn.dataset.filter;
     filterBtns.forEach((b) => b.classList.remove("active"));
     btn.classList.add("active");
-    // 현재 로그인한 사용자 정보로 목록 갱신
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session && session.user) loadTodos(session.user.id);
-    });
+    debouncedFilter();
   });
 });
 
@@ -83,6 +162,15 @@ if (addForm) {
     input.value = "";
     dueInput.value = "";
     prioInput.value = "중간";
+    
+    // MDL 텍스트필드 초기화
+    const textfields = document.querySelectorAll('.mdl-textfield');
+    textfields.forEach(field => {
+      if (field.MaterialTextfield) {
+        field.MaterialTextfield.checkDirty();
+      }
+    });
+    
     await loadTodos(session.user.id);
   });
 }
@@ -98,14 +186,14 @@ function getDDay(due) {
   return `D+${Math.abs(diff)}`;
 }
 
-// 우선순위 컬러
-function getPriorityColor(priority) {
-  if (priority === "높음") return "#ff6b81";
-  if (priority === "중간") return "#6c63ff";
-  return "#5ad1e6";
-}
-
 export async function loadTodos(userId) {
+  const todoList = document.getElementById("todo-list");
+  
+  // 로딩 중이 아닌 경우에만 로딩 표시
+  if (!todoList.innerHTML.includes('로딩 중...')) {
+    showLoading();
+  }
+  
   let query = supabase.from("todos").select("*").eq("user_id", userId);
   // 필터 적용
   if (currentFilter === "today") {
@@ -117,22 +205,28 @@ export async function loadTodos(userId) {
     .order("priority", { ascending: true })
     .order("due_date", { ascending: true })
     .order("created_at", { ascending: false });
-  const list = document.getElementById("todo-list");
-  list.innerHTML = "";
+    
+  todoList.innerHTML = "";
+  
   if (handleAuthError(error)) return;
   if (error) {
-    list.innerHTML = "<li>불러오기 실패: " + error.message + "</li>";
+    todoList.innerHTML = '<li class="todo-item error-item">불러오기 실패: ' + error.message + '</li>';
     return;
   }
+  
   if (data.length === 0) {
-    list.innerHTML = "<li>할 일이 없습니다.</li>";
+    todoList.innerHTML = '<li class="todo-item empty-item">할 일이 없습니다.</li>';
     return;
   }
+  
   for (const todo of data) {
     const li = document.createElement("li");
+    li.className = `todo-item priority-${todo.priority || '중간'}`;
+    
     // 체크박스
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
+    checkbox.className = "todo-checkbox";
     checkbox.checked = !!todo.is_done;
     checkbox.addEventListener("change", async () => {
       const { error } = await supabase
@@ -143,44 +237,57 @@ export async function loadTodos(userId) {
       await loadTodos(userId);
     });
     li.appendChild(checkbox);
-    // 우선순위 태그
-    const prio = document.createElement("span");
-    prio.textContent = todo.priority || "중간";
-    prio.style.background = getPriorityColor(todo.priority);
-    prio.style.color = "#fff";
-    prio.style.fontSize = "0.85em";
-    prio.style.fontWeight = "bold";
-    prio.style.borderRadius = "6px";
-    prio.style.padding = "2px 8px";
-    prio.style.marginRight = "8px";
-    li.appendChild(prio);
+    
+    // 콘텐츠 컨테이너
+    const content = document.createElement("div");
+    content.className = "todo-content";
+    
     // 제목
-    const span = document.createElement("span");
-    span.textContent = todo.title;
-    if (todo.is_done) {
-      span.style.textDecoration = "line-through";
-      span.style.color = "#aaa";
+    const titleEl = document.createElement("p");
+    titleEl.className = `todo-text${todo.is_done ? ' completed' : ''}`;
+    titleEl.textContent = todo.title;
+    content.appendChild(titleEl);
+    
+    // 메타 정보 (마감일, 우선순위)
+    if (todo.due_date || todo.priority) {
+      const meta = document.createElement("div");
+      meta.className = "todo-meta";
+      
+      // 마감일 D-Day
+      if (todo.due_date) {
+        const dday = document.createElement("span");
+        const ddayText = getDDay(todo.due_date);
+        dday.className = `todo-due${ddayText.includes('+') ? ' overdue' : ''}`;
+        dday.textContent = ddayText;
+        meta.appendChild(dday);
+      }
+      
+      // 우선순위
+      if (todo.priority) {
+        const priority = document.createElement("span");
+        priority.className = `todo-priority priority-${todo.priority}`;
+        priority.textContent = todo.priority;
+        meta.appendChild(priority);
+      }
+      
+      content.appendChild(meta);
     }
-    li.appendChild(span);
-    // 마감일 D-Day
-    if (todo.due_date) {
-      const dday = document.createElement("span");
-      dday.textContent = " " + getDDay(todo.due_date);
-      dday.style.marginLeft = "10px";
-      dday.style.fontSize = "0.92em";
-      dday.style.color = "#6c63ff";
-      li.appendChild(dday);
-    }
+    
+    li.appendChild(content);
+    
     // 삭제 버튼
     const delBtn = document.createElement("button");
+    delBtn.className = "todo-delete";
     delBtn.textContent = "삭제";
-    delBtn.style.marginLeft = "8px";
     delBtn.addEventListener("click", async () => {
-      const { error } = await supabase.from("todos").delete().eq("id", todo.id);
-      if (handleAuthError(error)) return;
-      await loadTodos(userId);
+      if (confirm("정말 삭제하시겠습니까?")) {
+        const { error } = await supabase.from("todos").delete().eq("id", todo.id);
+        if (handleAuthError(error)) return;
+        await loadTodos(userId);
+      }
     });
     li.appendChild(delBtn);
-    list.appendChild(li);
+    
+    todoList.appendChild(li);
   }
 }

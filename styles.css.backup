@@ -15,66 +15,48 @@ body {
 /* MDL Layout Overrides */
 .mdl-layout {
   background: transparent;
-  width: 100%;
-  height: 100%;
 }
 
 .mdl-layout__header {
   background: linear-gradient(90deg, #6c63ff 60%, #5ad1e6 100%);
   box-shadow: 0 2px 8px rgba(108, 99, 255, 0.15);
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 1000;
 }
 
 .mdl-layout__content {
   display: flex;
   justify-content: center;
-  align-items: flex-start;
-  min-height: 100vh;
-  padding: 120px 0 60px 0;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  overflow-x: hidden;
+  align-items: center;
+  min-height: calc(100vh - 64px);
+  padding: 20px;
 }
 
 /* Main App Container */
 #app {
+  max-width: 900px;
   width: 100%;
-  max-width: 980px;
-  margin: 0 auto;
   background: #fff;
-  border-radius: 28px;
-  box-shadow: 0 16px 48px rgba(60, 60, 120, 0.16),
-    0 4px 16px rgba(90, 209, 230, 0.10);
-  padding: 56px 80px 40px 80px;
-  min-height: 650px;
-  position: relative;
-  z-index: 1;
+  border-radius: 22px;
+  box-shadow: 0 8px 32px rgba(60, 60, 120, 0.13),
+    0 1.5px 6px rgba(90, 209, 230, 0.07);
+  padding: 32px;
+  min-height: 70vh;
 }
 
 /* Auth Section Styling */
 #auth-section {
-  max-width: 100%;
+  max-width: 430px;
   margin: 0 auto;
-  padding: 0;
 }
 
 .mdl-tabs__tab-bar {
   background: transparent;
   border-bottom: 2px solid #e0e0e0;
-  display: flex;
-  justify-content: center;
 }
 
 .mdl-tabs__tab {
   color: #666;
   font-weight: 500;
   padding: 16px 24px;
-  text-decoration: none;
-  border-bottom: 2px solid transparent;
-  transition: all 0.2s ease;
 }
 
 .mdl-tabs__tab.is-active {
@@ -83,7 +65,7 @@ body {
 }
 
 .mdl-tabs__panel {
-  padding: 20px 0;
+  padding: 24px 0;
 }
 
 /* Input Field Enhancements */
@@ -137,45 +119,31 @@ body {
 /* TODO Card */
 .todo-card {
   width: 100%;
-  min-width: 340px;
-  min-height: 500px;
-  margin-top: 0;
-  box-shadow: none;
-  background: #fafdff;
-  border-radius: 24px;
-  padding-bottom: 32px;
+  min-height: 400px;
 }
 
 .todo-card .mdl-card__title {
   background: linear-gradient(135deg, #6c63ff 0%, #5ad1e6 100%);
   color: white;
-  border-radius: 24px 24px 0 0;
-  padding: 48px 56px 32px 56px;
 }
 
 .todo-card .mdl-card__title-text {
   margin: 0;
-  font-size: 1.4rem;
+  font-size: 1.5rem;
   font-weight: 600;
-}
-
-.todo-card .mdl-card__supporting-text {
-  padding: 48px 40px 18px 40px;
 }
 
 /* Filter Tabs */
 .filter-tabs {
   display: flex;
-  gap: 18px;
-  margin-bottom: 28px;
+  gap: 8px;
+  margin-bottom: 20px;
   flex-wrap: wrap;
-  justify-content: center;
 }
 
 .filter-btn {
   flex: 1;
-  min-width: 100px;
-  max-width: 120px;
+  min-width: 120px;
 }
 
 .filter-btn.active {
@@ -185,9 +153,8 @@ body {
 
 /* TODO Form */
 .todo-form {
-  margin-bottom: 28px;
+  margin-bottom: 20px;
   align-items: flex-end;
-  gap: 18px;
 }
 
 .date-field input[type="date"] {
@@ -232,7 +199,7 @@ body {
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 12px;
 }
 
 .todo-item {
@@ -350,17 +317,16 @@ body {
   transform: scale(1.05);
 }
 
-/* Empty and Error States */
+/* Special Todo Item States */
 .empty-item,
 .error-item,
 .loading-item {
+  justify-content: center;
   text-align: center;
-  padding: 40px 20px;
-  color: #666;
   font-style: italic;
-  border: 2px dashed #ddd;
-  border-radius: 12px;
-  background: #f9f9f9;
+  color: #666;
+  background: #f0f0f0;
+  border: 2px dashed #ccc;
 }
 
 .error-item {
@@ -371,21 +337,19 @@ body {
 
 .loading-item {
   color: #6c63ff;
-  background: #f3f2ff;
-  border-color: #c5c1ff;
+  background: #e8eaf6;
+  border-color: #c5cae9;
 }
 
 /* 반응형 디자인 */
 @media (max-width: 840px) {
   .mdl-layout__content {
-    padding: 70px 16px 16px 16px;
+    padding: 16px;
   }
 
   #app {
-    width: 95%;
-    padding: 20px;
+    padding: 24px;
     border-radius: 16px;
-    min-height: 50vh;
   }
 
   .todo-form {
@@ -418,18 +382,17 @@ body {
 
   .mdl-layout__content {
     min-height: calc(100vh - 56px);
-    padding: 65px 12px 12px 12px;
+    padding: 12px;
   }
 
   #app {
-    width: 98%;
-    padding: 16px;
+    padding: 20px;
     border-radius: 12px;
     min-height: 0;
   }
 
   .mdl-card__title-text {
-    font-size: 1.2rem;
+    font-size: 1.3rem;
   }
 
   .mdl-tabs__tab {
@@ -463,26 +426,24 @@ body {
   }
 
   .filter-tabs {
-    flex-direction: row;
+    flex-direction: column;
     gap: 8px;
   }
 
   .filter-btn {
-    flex: 1;
+    width: 100%;
     min-width: auto;
   }
 }
 
 @media (max-width: 480px) {
   .mdl-layout__content {
-    padding: 60px 8px 8px 8px;
+    padding: 8px;
   }
 
   #app {
-    width: 100%;
-    padding: 12px;
+    padding: 16px;
     border-radius: 8px;
-    margin: 0;
   }
 
   .mdl-textfield__input {
@@ -511,6 +472,10 @@ body {
 }
 
 /* Performance Optimizations */
+* {
+  will-change: auto;
+}
+
 .mdl-button,
 .todo-item,
 .filter-btn {
