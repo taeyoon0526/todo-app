@@ -8,7 +8,20 @@
   </head>
   <body>
     <div id="app">
-      <!-- TODO: 로그인/회원가입 및 메인 UI 영역 -->
+      <h2>회원가입</h2>
+      <form id="signup-form">
+        <input type="email" id="signup-email" placeholder="이메일" required />
+        <input type="text" id="signup-username" placeholder="아이디" required />
+        <input
+          type="password"
+          id="signup-password"
+          placeholder="비밀번호(8자 이상)"
+          minlength="8"
+          required
+        />
+        <button type="submit">회원가입</button>
+        <div id="signup-error" style="color: red; margin-top: 8px"></div>
+      </form>
     </div>
     <script src="scripts/api.js"></script>
     <script src="scripts/auth.js"></script>
