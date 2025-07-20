@@ -28,9 +28,9 @@
         <span class="mdl-layout-title">TODO-LIST</span>
         <div class="mdl-layout-spacer"></div>
         <nav class="mdl-navigation">
-          <button id="logout-button" class="mdl-button mdl-js-button mdl-button--icon mdl-js-ripple-effect logout-btn"
-            title="로그아웃">
+          <button id="logout-button" class="mdl-button mdl-js-button mdl-js-ripple-effect logout-btn" title="로그아웃">
             <i class="material-icons">logout</i>
+            <span class="logout-text">로그아웃</span>
           </button>
         </nav>
       </div>
@@ -320,6 +320,21 @@
         validateLoginForm();
       }
     };
+
+    // 로그인 성공 이벤트 리스너 추가
+    window.addEventListener("login-success", (e) => {
+      const userId = e.detail.user.id;
+      console.log("로그인 성공 이벤트 수신, 사용자 ID:", userId);
+
+      // 인증 섹션 숨기고 앱 섹션 표시
+      document.getElementById("auth-section").style.display = "none";
+      document.getElementById("app-section").style.display = "block";
+
+      // main.js의 showTodoApp 함수 호출
+      if (window.showTodoApp) {
+        window.showTodoApp(userId);
+      }
+    });
   </script>
   <script type="module" src="scripts/main.js"></script>
 </body>

@@ -45,14 +45,29 @@ body {
   display: none !important;
   color: white !important;
   transition: opacity 0.3s ease;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .logout-btn:hover {
   opacity: 0.8;
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
 .logout-btn.visible {
   display: inline-flex !important;
+}
+
+.logout-btn .material-icons {
+  font-size: 20px;
+}
+
+.logout-text {
+  margin-left: 4px;
 }
 
 .mdl-layout__content {

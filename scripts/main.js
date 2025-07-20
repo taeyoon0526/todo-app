@@ -219,17 +219,6 @@ if (addForm) {
   });
 }
 
-// D-Day 계산 함수
-function getDDay(due) {
-  if (!due) return "";
-  const today = new Date();
-  const dueDate = new Date(due);
-  const diff = Math.floor((dueDate - today) / (1000 * 60 * 60 * 24));
-  if (diff === 0) return "D-DAY";
-  if (diff > 0) return `D-${diff}`;
-  return `D+${Math.abs(diff)}`;
-}
-
 export async function loadTodos(userId) {
   const todoList = document.getElementById("todo-list");
   
@@ -536,3 +525,6 @@ function clearLocalStorage() {
     console.error("[ERROR] 스토리지 정리 실패:", error);
   }
 }
+
+// 전역 함수로 노출 (index.html에서 접근 가능하도록)
+window.showTodoApp = showTodoApp;
