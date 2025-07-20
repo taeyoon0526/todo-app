@@ -688,7 +688,7 @@ if (addForm) {
     const { error } = await supabase.from("todos").insert({
       user_id: session.user.id,
       title,
-      completed: false, // status 대신 completed 사용
+      status: 'pending', // status 컬럼 사용
       due_date,
       priority,
     });
