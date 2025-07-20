@@ -1,44 +1,44 @@
 // scripts/auth.js
 import { supabase } from "./api.js";
 
-// 회원가입 함수
-export async function signUpWithEmail(email, password, username) {
-  // Supabase Auth로 회원가입
-  const { user, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: { username },
-    },
-  });
-  return { user, error };
+export async function signUpHandler(email, password) {
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+    console.log("[DEBUG] signUp result", data, error);
+    if (error) {
+      alert("회원가입 실패: " + error.message);
+    } else {
+      alert("회원가입 성공! 이메일 인증 후 로그인하세요.");
+    }
+  } catch (e) {
+    console.error(e);
+    alert("예상치 못한 오류가 발생했습니다.");
+  }
 }
 
-// 회원가입 폼 이벤트 리스너
-const signupForm = document.getElementById("signup-form");
-if (signupForm) {
-  signupForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const email = document.getElementById("signup-email").value;
-    const username = document.getElementById("signup-username").value;
-    const password = document.getElementById("signup-password").value;
-    const errorDiv = document.getElementById("signup-error");
-    errorDiv.textContent = "";
-    if (!email || !username || !password) {
-      errorDiv.textContent = "모든 항목을 입력하세요.";
-      return;
-    }
-    if (password.length < 8) {
-      errorDiv.textContent = "비밀번호는 8자 이상이어야 합니다.";
-      return;
-    }
-    const { user, error } = await signUpWithEmail(email, password, username);
+export async function signInHandler(email, password) {
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    console.log("[DEBUG] signIn result", data, error);
     if (error) {
-      errorDiv.textContent = error.message;
+      alert("로그인 실패: " + error.message);
     } else {
-      errorDiv.style.color = "green";
-      errorDiv.textContent = "회원가입 성공! 이메일 인증 후 로그인하세요.";
-      signupForm.reset();
+      alert("로그인 성공!");
+      // 로그인 성공 시 커스텀 이벤트 발생
+      window.dispatchEvent(
+        new CustomEvent("login-success", { detail: { user: data.user } })
+      );
     }
-  });
+  } catch (e) {
+    console.error(e);
+    alert("예상치 못한 오류가 발생했습니다.");
+  }
 }
+
+// 폼 이벤트 연결 (index.html에서 type="module"로 import 필요)
