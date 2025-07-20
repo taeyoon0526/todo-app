@@ -635,24 +635,24 @@ function showLoading() {
   list.innerHTML = '<li class="todo-item loading-item">로딩 중...</li>';
 }
 
-// 필터 버튼 이벤트 (디바운싱 적용)
-const filterBtns = document.querySelectorAll(".filter-btn");
-const debouncedFilter = debounce(async () => {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session && session.user) {
-    showLoading();
-    await loadTodos(session.user.id);
-  }
-}, 150);
+// 필터 버튼 이벤트 (디바운싱 적용) - setupFilteringSystem에서 처리됨
+// const filterBtns = document.querySelectorAll(".filter-btn");
+// const debouncedFilter = debounce(async () => {
+//   const { data: { session } } = await supabase.auth.getSession();
+//   if (session && session.user) {
+//     showLoading();
+//     await loadTodos(session.user.id);
+//   }
+// }, 150);
 
-filterBtns.forEach((btn) => {
-  btn.addEventListener("click", () => {
-    currentFilter = btn.dataset.filter;
-    filterBtns.forEach((b) => b.classList.remove("active"));
-    btn.classList.add("active");
-    debouncedFilter();
-  });
-});
+// filterBtns.forEach((btn) => {
+//   btn.addEventListener("click", () => {
+//     currentFilter = btn.dataset.filter;
+//     filterBtns.forEach((b) => b.classList.remove("active"));
+//     btn.classList.add("active");
+//     debouncedFilter();
+//   });
+// });
 
 // 할 일 추가 폼 이벤트 (마감일, 우선순위 포함)
 const addForm = document.getElementById("todo-add-form");
@@ -1279,21 +1279,27 @@ function showNotificationSettings() {
 function setupFilteringSystem(userId) {
   console.log('[FILTER] 필터링 시스템 초기화');
   
+  // 디바운스된 필터 함수 생성
+  const debouncedFilter = debounce(async () => {
+    showLoading();
+    await loadTodos(userId);
+  }, 150);
+  
   // 모든 필터 버튼에 이벤트 리스너 추가
   const filterButtons = document.querySelectorAll('.filter-btn[data-filter]');
   filterButtons.forEach(button => {
     button.addEventListener('click', (e) => {
       const filter = e.target.getAttribute('data-filter');
-      setCurrentFilter(filter, userId);
+      setCurrentFilter(filter, userId, debouncedFilter);
     });
   });
   
   // 필터 상태 초기화
-  setCurrentFilter('all', userId);
+  setCurrentFilter('all', userId, debouncedFilter);
 }
 
 // 현재 필터 설정
-function setCurrentFilter(filter, userId) {
+function setCurrentFilter(filter, userId, debouncedFilter = null) {
   currentFilter = filter;
   
   // 모든 필터 버튼의 활성 상태 초기화
@@ -1310,8 +1316,12 @@ function setCurrentFilter(filter, userId) {
   
   console.log(`[FILTER] 필터 변경: ${filter}`);
   
-  // 할 일 목록 다시 로드
-  loadTodos(userId);
+  // 할 일 목록 다시 로드 (디바운스 적용)
+  if (debouncedFilter) {
+    debouncedFilter();
+  } else {
+    loadTodos(userId);
+  }
 }
 
 // 고급 필터링 함수

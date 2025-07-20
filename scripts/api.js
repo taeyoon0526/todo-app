@@ -13,14 +13,14 @@
 // Supabase 클라이언트 초기화 (환경변수 사용)
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-// Vercel 환경변수 사용 (프로덕션)
-const SUPABASE_URL = typeof process !== 'undefined' && process.env?.VITE_SUPABASE_URL 
-  ? process.env.VITE_SUPABASE_URL 
-  : "https://eybuksswxwbvpuyhvocb.supabase.co";
+// 환경변수 또는 설정 파일에서 값 로드
+const SUPABASE_URL = window.ENV?.SUPABASE_URL 
+  || import.meta?.env?.VITE_SUPABASE_URL 
+  || "https://eybuksswxwbvpuyhvocb.supabase.co";
 
-const SUPABASE_KEY = typeof process !== 'undefined' && process.env?.VITE_SUPABASE_ANON_KEY
-  ? process.env.VITE_SUPABASE_ANON_KEY
-  : "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV5YnVrc3N3eHdidnB1eWh2b2NiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI5OTY1ODQsImV4cCI6MjA2ODU3MjU4NH0.QzxQF5sP0ns1cSpZ6cBjN2UK8B-2ccyhZC0Hn_LR9hw";
+const SUPABASE_KEY = window.ENV?.SUPABASE_ANON_KEY 
+  || import.meta?.env?.VITE_SUPABASE_ANON_KEY 
+  || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV5YnVrc3N3eHdidnB1eWh2b2NiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI5OTY1ODQsImV4cCI6MjA2ODU3MjU4NH0.QzxQF5sP0ns1cSpZ6cBjN2UK8B-2ccyhZC0Hn_LR9hw";
 
 // 환경변수 검증
 if (!SUPABASE_URL || !SUPABASE_KEY) {
