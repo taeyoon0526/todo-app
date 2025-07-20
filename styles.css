@@ -793,6 +793,7 @@ select:focus {
   display: none !important;
   width: 56px !important;
   height: 56px !important;
+  border-radius: 50% !important;
   background: linear-gradient(45deg, #6c63ff, #5ad1e6) !important;
   box-shadow: 0 6px 20px rgba(108, 99, 255, 0.3) !important;
   touch-action: manipulation;
