@@ -83,7 +83,8 @@ body {
 /* Main App Container */
 #app {
   width: 100%;
-  max-width: 980px;
+  max-width: 1200px;
+  /* 980px에서 1200px로 증가 */
   margin: 0 auto;
   background: #fff;
   border-radius: 28px;
@@ -158,6 +159,10 @@ body {
   font-weight: 600;
   box-shadow: 0 2px 8px rgba(108, 99, 255, 0.15);
   transition: all 0.2s ease;
+  min-width: 150px;
+  /* 기본 버튼 너비 1.5배 증가 */
+  padding: 12px 24px;
+  /* 패딩도 늘려서 더 넓게 */
 }
 
 .mdl-button--raised:hover {
@@ -178,7 +183,8 @@ body {
 /* TODO Card */
 .todo-card {
   width: 100%;
-  min-width: 340px;
+  min-width: 600px;
+  /* 340px에서 600px로 증가 */
   min-height: 500px;
   margin-top: 0;
   box-shadow: none;
@@ -191,17 +197,22 @@ body {
   background: linear-gradient(135deg, #6c63ff 0%, #5ad1e6 100%);
   color: white;
   border-radius: 24px 24px 0 0;
-  padding: 48px 56px 32px 56px;
+  padding: 48px 80px 32px 80px;
+  /* 좌우 패딩을 56px에서 80px로 증가 */
 }
 
 .todo-card .mdl-card__title-text {
   margin: 0;
-  font-size: 1.4rem;
+  font-size: 1.6rem;
+  /* 1.4rem에서 1.6rem로 약간 증가 */
   font-weight: 600;
+  text-align: center;
+  /* 중앙 정렬 추가 */
 }
 
 .todo-card .mdl-card__supporting-text {
-  padding: 48px 40px 18px 40px;
+  padding: 48px 60px 18px 60px;
+  /* 좌우 패딩을 40px에서 60px로 증가 */
 }
 
 /* Filter Tabs */
@@ -215,8 +226,12 @@ body {
 
 .filter-btn {
   flex: 1;
-  min-width: 100px;
-  max-width: 120px;
+  min-width: 150px;
+  /* 100px에서 150px로 1.5배 증가 */
+  max-width: 180px;
+  /* 120px에서 180px로 1.5배 증가 */
+  padding: 12px 18px;
+  /* 패딩 추가로 더 넓게 */
 }
 
 .filter-btn.active {
@@ -224,7 +239,123 @@ body {
   color: white !important;
 }
 
+/* 우선순위 정렬 버튼 */
+#sort-priority {
+  background: #ff7043 !important;
+  color: white !important;
+  display: flex !important;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+}
+
+#sort-priority .material-icons {
+  font-size: 16px;
+}
+
+#sort-priority:hover {
+  background: #ff5722 !important;
+}
+
 /* 완료 보기 토글 버튼 */
+/* Filter Buttons */
+.filter-btn {
+  margin: 4px !important;
+  transition: all 0.3s ease !important;
+}
+
+.filter-btn.active {
+  background: #6c63ff !important;
+  color: white !important;
+  box-shadow: 0 2px 8px rgba(108, 99, 255, 0.3) !important;
+}
+
+.filter-btn:hover {
+  background: #f5f5f5 !important;
+  transform: translateY(-1px);
+}
+
+.filter-btn.active:hover {
+  background: #5a54d9 !important;
+  transform: translateY(-1px);
+}
+
+/* Search Container */
+.search-container {
+  margin: 16px 0 !important;
+  width: 100% !important;
+}
+
+.search-container .mdl-textfield__input {
+  border-bottom: 2px solid #e0e0e0 !important;
+  transition: border-color 0.3s ease !important;
+}
+
+.search-container .mdl-textfield__input:focus {
+  border-bottom: 2px solid #6c63ff !important;
+}
+
+.search-container .mdl-textfield__label {
+  color: #666 !important;
+}
+
+.search-container.is-focused .mdl-textfield__label {
+  color: #6c63ff !important;
+}
+
+/* 접근성 개선 */
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* 포커스 스타일 강화 */
+button:focus,
+input:focus,
+select:focus {
+  outline: 2px solid #6c63ff !important;
+  outline-offset: 2px !important;
+}
+
+/* 고대비 모드 지원 */
+@media (prefers-contrast: high) {
+  .todo-item {
+    border: 2px solid #000 !important;
+  }
+
+  .priority-높음 {
+    background: #fff !important;
+    border-left: 4px solid #000 !important;
+  }
+
+  .priority-중간 {
+    background: #f8f8f8 !important;
+    border-left: 4px solid #666 !important;
+  }
+
+  .priority-낮음 {
+    background: #f0f0f0 !important;
+    border-left: 4px solid #999 !important;
+  }
+}
+
+/* 모션 감소 설정 지원 */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 #toggle-completed {
   background: #28a745 !important;
   color: white !important;
@@ -245,6 +376,19 @@ body {
 
 .date-field input[type="date"] {
   min-width: 120px;
+  padding-left: 80px;
+  /* 마감일 라벨을 위한 공간 확보 */
+  text-align: left;
+  /* 텍스트 정렬 */
+}
+
+/* 마감일 라벨 위치 조정 */
+.date-field .mdl-textfield__label {
+  left: 0;
+  /* 라벨을 왼쪽 끝에 위치 */
+  width: 70px;
+  /* 라벨 너비 지정 */
+  text-align: left;
 }
 
 .priority-field select {
@@ -445,11 +589,14 @@ body {
   color: white;
   border: none;
   border-radius: 8px;
-  padding: 8px 12px;
+  padding: 8px 18px;
+  /* 12px에서 18px로 1.5배 증가 */
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s ease;
   margin-left: 12px;
+  min-width: 90px;
+  /* 최소 너비도 1.5배 증가 */
 }
 
 .todo-delete:hover {
@@ -514,7 +661,10 @@ body {
   }
 
   .filter-btn {
-    min-width: 100px;
+    min-width: 150px;
+    /* 100px에서 150px로 1.5배 증가 */
+    padding: 12px 16px;
+    /* 패딩 추가 */
   }
 }
 
@@ -577,7 +727,142 @@ body {
   .filter-btn {
     flex: 1;
     min-width: auto;
+    touch-action: manipulation;
+    /* 더 빠른 터치 반응 */
   }
+
+  /* 터치 디바이스 최적화 */
+  .todo-checkbox {
+    width: 24px;
+    height: 24px;
+  }
+
+  .todo-delete {
+    min-height: 44px;
+    /* 터치 타겟 최소 크기 */
+    min-width: 44px;
+  }
+}
+
+/* 고해상도 디스플레이 최적화 */
+@media (-webkit-min-device-pixel-ratio: 2) {
+  .mdl-button--fab .material-icons {
+    transform: translateZ(0);
+    /* 하드웨어 가속 */
+  }
+}
+
+/* 성능 최적화 */
+.todo-item,
+.filter-btn,
+.mdl-button--raised {
+  will-change: transform;
+  /* 애니메이션 최적화 */
+}
+
+/* 접근성 개선 */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* 모바일 FAB (Floating Action Button) */
+.mobile-fab {
+  position: fixed !important;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1000;
+  display: none !important;
+  width: 56px !important;
+  height: 56px !important;
+  background: linear-gradient(45deg, #6c63ff, #5ad1e6) !important;
+  box-shadow: 0 6px 20px rgba(108, 99, 255, 0.3) !important;
+  touch-action: manipulation;
+  transition: all 0.3s ease;
+}
+
+.mobile-fab:hover {
+  transform: scale(1.1);
+  box-shadow: 0 8px 25px rgba(108, 99, 255, 0.4) !important;
+}
+
+.mobile-fab:active {
+  transform: scale(0.95);
+}
+
+/* 모바일에서만 FAB 표시 */
+@media (max-width: 768px) {
+  .mobile-fab {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* 모바일에서 기존 작업 추가 폼 숨김 */
+  .todo-form {
+    display: none;
+  }
+}
+
+/* 모바일 작업 추가 모달 */
+.mobile-add-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 2000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.mobile-add-modal.active {
+  display: flex;
+}
+
+.mobile-add-content {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.mobile-add-content h3 {
+  margin: 0 0 20px 0;
+  color: #333;
+  font-size: 1.3rem;
+}
+
+.mobile-add-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.mobile-add-form .mdl-textfield {
+  margin: 0;
+}
+
+.mobile-add-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.mobile-add-buttons button {
+  min-width: 120px;
+  /* 80px에서 120px로 1.5배 증가 */
+  padding: 12px 18px;
+  /* 패딩도 증가 */
 }
 
 @media (max-width: 480px) {
@@ -650,5 +935,240 @@ body {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* Google OAuth Styles */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  margin: 16px 0;
+  text-align: center;
+  position: relative;
+}
+
+.auth-divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: #e0e0e0;
+  z-index: 1;
+}
+
+.auth-divider span {
+  background: white;
+  padding: 0 16px;
+  font-size: 14px;
+  color: #666;
+  position: relative;
+  z-index: 2;
+}
+
+.google-login-btn {
+  background-color: white !important;
+  color: #333 !important;
+  border: 1px solid #dadce0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 12px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.25px !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 1px 3px rgba(60, 64, 67, 0.3) !important;
+  min-width: 225px !important;
+  /* 구글 버튼도 1.5배 넓게 */
+  padding: 12px 24px !important;
+  /* 패딩 추가 */
+}
+
+.google-login-btn:hover {
+  background-color: #f8f9fa !important;
+  box-shadow: 0 2px 8px rgba(60, 64, 67, 0.15) !important;
+  transform: translateY(-1px);
+}
+
+.google-login-btn:focus {
+  outline: 2px solid #4285f4 !important;
+  outline-offset: 2px !important;
+}
+
+.google-icon {
+  flex-shrink: 0;
+}
+
+/* Dark mode support for Google button */
+@media (prefers-color-scheme: dark) {
+  .google-login-btn {
+    background-color: #1f1f1f !important;
+    color: #e8eaed !important;
+    border-color: #5f6368 !important;
+  }
+
+  .google-login-btn:hover {
+    background-color: #2d2d30 !important;
+  }
+
+  .auth-divider span {
+    background: #1f1f1f;
+    color: #9aa0a6;
+  }
+
+  .auth-divider::before {
+    background: #5f6368;
+  }
+}
+
+/* Responsive Design for wider cards */
+@media (max-width: 1280px) {
+  #app {
+    max-width: 95%;
+    padding: 40px 60px 32px 60px;
+  }
+
+  .todo-card {
+    min-width: 500px;
+  }
+
+  .todo-card .mdl-card__title {
+    padding: 40px 60px 28px 60px;
+  }
+
+  .todo-card .mdl-card__supporting-text {
+    padding: 40px 50px 16px 50px;
+  }
+}
+
+@media (max-width: 768px) {
+  #app {
+    padding: 24px 32px 20px 32px;
+  }
+
+  .todo-card {
+    min-width: auto;
+  }
+
+  .todo-card .mdl-card__title {
+    padding: 32px 40px 24px 40px;
+  }
+
+  .todo-card .mdl-card__title-text {
+    font-size: 1.4rem;
+  }
+
+  .todo-card .mdl-card__supporting-text {
+    padding: 32px 24px 16px 24px;
+  }
+}
+
+/* 토스트 메시지 스타일 */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  max-width: 400px;
+  width: auto;
+}
+
+.toast-message {
+  background: #ff5722;
+  color: white;
+  padding: 16px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  animation: slideInToast 0.3s ease-out;
+  max-width: 100%;
+  word-wrap: break-word;
+}
+
+.toast-message.success {
+  background: #4caf50;
+}
+
+.toast-message.warning {
+  background: #ff9800;
+}
+
+.toast-message.info {
+  background: #2196f3;
+}
+
+.toast-message.hidden {
+  display: none;
+}
+
+.toast-message .toast-close {
+  background: transparent;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+  min-width: 24px;
+  height: 24px;
+}
+
+.toast-message .toast-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.toast-message .toast-close .material-icons {
+  font-size: 18px;
+}
+
+#toast-text {
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+@keyframes slideInToast {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutToast {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+/* 모바일 토스트 최적화 */
+@media (max-width: 768px) {
+  .toast-container {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    max-width: none;
+  }
+
+  .toast-message {
+    padding: 14px 16px;
+    font-size: 13px;
   }
 }

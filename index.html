@@ -7,6 +7,16 @@
   <meta name="description" content="현대적인 웹 기반 할 일 관리 애플리케이션" />
   <meta name="author" content="taeyoon0526" />
   <meta name="license" content="Shared Source License - See LICENSE file" />
+
+  <!-- PWA 설정 -->
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#6c63ff" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="TODO-LIST" />
+  <link rel="apple-touch-icon"
+    href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDUxMiA1MTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiByeD0iNzIiIGZpbGw9InVybCgjZ3JhZGllbnQwKSIvPgo8cGF0aCBkPSJNMTI4IDI1NkMxMjggMjMzLjkwOSAxNDUuOTA5IDIxNiAxNjggMjE2SDM0NEM2Ni4wOTE0IDIxNiAzODQgMjMzLjkwOSAzODQgMjU2QzM4NCA3OC4wOTE0IDM2Ni4wOTEgMjk2IDM0NCAyOTZIMTY4QzE0NS45MDkgMjk2IDEyOCAyNzguMDkxIDEyOCAyNTZaIiBmaWxsPSJ3aGl0ZSIvPgo8ZGVmcz4KPGxpbmVhckdyYWRpZW50IGlkPSJncmFkaWVudDAiIHgxPSIwIiB5MT0iMCIgeDI9IjUxMiIgeTI9IjUxMiIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPgo8c3RvcCBzdG9wLWNvbG9yPSIjNkM2M0ZGIi8+CjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzVBRDFFNiIvPgo8L2xpbmVhckdyYWRpZW50Pgo8L2RlZnM+Cjwvc3ZnPgo=" />
+
   <title>TODO-LIST</title>
   <link rel="stylesheet" href="styles.css" />
   <!-- Material Design Lite -->
@@ -60,6 +70,27 @@
                   class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored mdl-cell mdl-cell--12-col">
                   회원가입
                 </button>
+
+                <!-- 구분선 -->
+                <div class="mdl-cell mdl-cell--12-col auth-divider">
+                  <span>또는</span>
+                </div>
+
+                <!-- 구글 로그인 버튼 -->
+                <button type="button" id="google-signup"
+                  class="mdl-button mdl-js-button mdl-button--raised google-login-btn mdl-cell mdl-cell--12-col mdl-js-ripple-effect">
+                  <svg class="google-icon" viewBox="0 0 24 24" width="18" height="18">
+                    <path fill="#4285F4"
+                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                    <path fill="#34A853"
+                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                    <path fill="#FBBC05"
+                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                    <path fill="#EA4335"
+                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                  </svg>
+                  구글로 계정 만들기
+                </button>
               </form>
             </div>
 
@@ -79,6 +110,27 @@
                   class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored mdl-cell mdl-cell--12-col">
                   로그인
                 </button>
+
+                <!-- 구분선 -->
+                <div class="mdl-cell mdl-cell--12-col auth-divider">
+                  <span>또는</span>
+                </div>
+
+                <!-- 구글 로그인 버튼 -->
+                <button type="button" id="google-login"
+                  class="mdl-button mdl-js-button mdl-button--raised google-login-btn mdl-cell mdl-cell--12-col mdl-js-ripple-effect">
+                  <svg class="google-icon" viewBox="0 0 24 24" width="18" height="18">
+                    <path fill="#4285F4"
+                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                    <path fill="#34A853"
+                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                    <path fill="#FBBC05"
+                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                    <path fill="#EA4335"
+                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                  </svg>
+                  구글로 로그인
+                </button>
               </form>
             </div>
           </div>
@@ -97,6 +149,11 @@
                   오늘
                 </button>
                 <button type="button"
+                  class="filter-btn mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect"
+                  data-filter="week">
+                  이번 주
+                </button>
+                <button type="button"
                   class="filter-btn mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect" data-filter="all">
                   전체
                 </button>
@@ -104,6 +161,17 @@
                   class="filter-btn mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect"
                   data-toggle="false">
                   완료 보기
+                </button>
+                <button type="button" id="sort-priority"
+                  class="filter-btn mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect" title="우선순위별 정렬">
+                  <i class="material-icons">sort</i>
+                  우선순위
+                </button>
+                <button type="button" id="notification-settings"
+                  class="filter-btn mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect" title="알림 설정"
+                  onclick="showNotificationSettings()">
+                  <i class="material-icons">notifications</i>
+                  알림
                 </button>
               </div>
 
@@ -138,9 +206,50 @@
               <ul id="todo-list" class="todo-list"></ul>
             </div>
           </div>
+
+          <!-- FAB for mobile quick add -->
+          <button id="mobile-fab"
+            class="mdl-button mdl-js-button mdl-button--fab mdl-js-ripple-effect mdl-button--colored mobile-fab"
+            title="빠른 작업 추가" aria-label="작업 추가">
+            <i class="material-icons">add</i>
+          </button>
         </div>
       </div>
     </main>
+  </div>
+
+  <!-- 모바일 작업 추가 모달 -->
+  <div id="mobile-add-modal" class="mobile-add-modal">
+    <div class="mobile-add-content">
+      <h3>새 작업 추가</h3>
+      <form id="mobile-add-form" class="mobile-add-form">
+        <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+          <input type="text" id="mobile-todo-input" class="mdl-textfield__input" required />
+          <label class="mdl-textfield__label" for="mobile-todo-input">할 일을 입력하세요</label>
+        </div>
+        <div class="mdl-textfield mdl-js-textfield">
+          <input type="date" id="mobile-todo-due" class="mdl-textfield__input" />
+          <label class="mdl-textfield__label" for="mobile-todo-due">마감일</label>
+        </div>
+        <div class="mdl-textfield mdl-js-textfield">
+          <select id="mobile-todo-priority" class="mdl-textfield__input" title="우선순위 선택">
+            <option value="높음">높음</option>
+            <option value="중간" selected>중간</option>
+            <option value="낮음">낮음</option>
+          </select>
+          <label class="mdl-textfield__label">우선순위</label>
+        </div>
+        <div class="mobile-add-buttons">
+          <button type="button" id="mobile-cancel-btn" class="mdl-button mdl-js-button mdl-js-ripple-effect">
+            취소
+          </button>
+          <button type="submit"
+            class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored mdl-js-ripple-effect">
+            추가
+          </button>
+        </div>
+      </form>
+    </div>
   </div>
   <script type="module">
     console.log("폼 이벤트 연결 시도");
@@ -337,6 +446,31 @@
     });
   </script>
   <script type="module" src="scripts/main.js"></script>
+
+  <!-- 토스트 메시지 컨테이너 -->
+  <div id="toast-container" class="toast-container">
+    <div id="toast-message" class="toast-message hidden">
+      <span id="toast-text"></span>
+      <button id="toast-close" class="toast-close" aria-label="닫기">
+        <i class="material-icons">close</i>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // 서비스 워커 등록
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then((registration) => {
+            console.log('[PWA] Service Worker registered:', registration);
+          })
+          .catch((error) => {
+            console.log('[PWA] Service Worker registration failed:', error);
+          });
+      });
+    }
+  </script>
 </body>
 
 </html>

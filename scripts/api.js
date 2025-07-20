@@ -44,3 +44,31 @@ if (!supabase) {
 // ⚠️ service_role 키는 절대 사용하지 마세요! anon public key만 사용
 
 console.log("[INFO] Supabase 클라이언트가 성공적으로 초기화되었습니다.");
+
+// 사용자 정보 저장 함수
+export async function saveUserInfo(user) {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .upsert({ 
+        id: user.id, 
+        email: user.email,
+        last_login: new Date().toISOString(),
+        created_at: user.created_at || new Date().toISOString()
+      }, { 
+        onConflict: 'id' 
+      });
+      
+    if (error) {
+      console.error("[ERROR] 사용자 정보 저장 실패:", error);
+      return { success: false, error };
+    }
+    
+    console.log("[INFO] 사용자 정보 저장 성공:", user.email);
+    return { success: true, data };
+    
+  } catch (error) {
+    console.error("[ERROR] 사용자 정보 upsert 예외:", error);
+    return { success: false, error };
+  }
+}

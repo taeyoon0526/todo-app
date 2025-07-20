@@ -196,13 +196,16 @@ export async function signUpHandler(email, password) {
   try {
     // 입력값 최종 검증
     if (!validateEmail(email)) {
-      alert("유효한 이메일을 입력하세요.");
-      return false;
+      throw new Error("유효한 이메일을 입력하세요.");
     }
     
     if (!validatePassword(password)) {
-      alert("비밀번호는 8자 이상, 영문과 숫자를 포함해야 합니다.");
-      return false;
+      throw new Error("비밀번호는 8자 이상, 영문과 숫자를 포함해야 합니다.");
+    }
+    
+    // 네트워크 연결 상태 확인
+    if (!navigator.onLine) {
+      throw new Error('Failed to fetch');
     }
     
     const { data, error } = await supabase.auth.signUp({
@@ -212,18 +215,22 @@ export async function signUpHandler(email, password) {
     console.log("[DEBUG] signUp result", data, error);
     
     if (error) {
-      // 중복 이메일 등의 에러 처리
+      // 구체적인 에러 처리
       if (error.message.includes("already registered") || error.message.includes("already been registered")) {
-        alert("이미 가입된 이메일입니다. 로그인을 시도해보세요.");
+        throw new Error("User already registered");
+      } else if (error.message.includes("Signup disabled")) {
+        throw new Error("Signup disabled");
+      } else if (error.message.includes("rate limit")) {
+        throw new Error("Too many requests");
       } else {
-        alert("회원가입 실패: " + error.message);
+        throw error;
       }
-      return false;
     } else {
-      alert("회원가입 성공! 자동으로 로그인됩니다.");
-      
       // 회원가입 성공 시 자동 로그인 처리
       if (data.user && data.session) {
+        console.log("[SUCCESS] 회원가입 및 자동 로그인 성공");
+        ToastManager.show("회원가입 성공! 자동으로 로그인됩니다.", "success", 3000);
+        
         // 즉시 로그인 성공 이벤트 발생 (2초 이내 이동)
         setTimeout(() => {
           window.dispatchEvent(
@@ -233,13 +240,34 @@ export async function signUpHandler(email, password) {
         return true;
       } else {
         // 이메일 인증이 필요한 경우
-        alert("이메일 인증 후 로그인하세요.");
+        ToastManager.show("이메일 인증 후 로그인하세요.", "info", 5000);
         return false;
       }
     }
-  } catch (e) {
-    console.error(e);
-    alert("예상치 못한 오류가 발생했습니다.");
+  } catch (error) {
+    console.error('[AUTH] 회원가입 오류:', error);
+    
+    // AuthErrorHandler 사용 (main.js에서 import 필요)
+    if (typeof AuthErrorHandler !== 'undefined') {
+      AuthErrorHandler.showError(error, 'SIGNUP');
+    } else {
+      // 폴백 처리
+      const errorMessages = {
+        'User already registered': '이미 가입된 이메일입니다. 로그인을 시도해보세요.',
+        'Signup disabled': '현재 회원가입이 비활성화되어 있습니다. 관리자에게 문의해주세요.',
+        'Too many requests': '너무 많은 요청이 발생했습니다. 잠시 후 다시 시도해주세요.',
+        'Failed to fetch': '네트워크 연결을 확인해주세요.'
+      };
+      
+      const userMessage = errorMessages[error.message] || `회원가입 실패: ${error.message}`;
+      
+      if (typeof ToastManager !== 'undefined') {
+        ToastManager.show(userMessage, 'error', 8000);
+      } else {
+        alert(userMessage);
+      }
+    }
+    
     return false;
   }
 }
@@ -248,13 +276,16 @@ export async function signInHandler(email, password) {
   try {
     // 입력값 검증
     if (!email || !password) {
-      alert("이메일과 비밀번호를 모두 입력해주세요.");
-      return false;
+      throw new Error("이메일과 비밀번호를 모두 입력해주세요.");
     }
 
     if (!validateEmail(email)) {
-      alert("유효한 이메일 형식이 아닙니다.");
-      return false;
+      throw new Error("유효한 이메일 형식이 아닙니다.");
+    }
+    
+    // 네트워크 연결 상태 확인
+    if (!navigator.onLine) {
+      throw new Error('Failed to fetch');
     }
 
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -266,15 +297,20 @@ export async function signInHandler(email, password) {
     if (error) {
       // 구체적인 에러 메시지 처리
       if (error.message.includes("Invalid login credentials")) {
-        alert("이메일 또는 비밀번호가 일치하지 않습니다.");
+        throw new Error("Invalid login credentials");
       } else if (error.message.includes("Email not confirmed")) {
-        alert("이메일 인증이 필요합니다. 이메일을 확인해주세요.");
+        throw new Error("Email not confirmed");
+      } else if (error.message.includes("Too many requests")) {
+        throw new Error("Too many requests");
+      } else if (error.message.includes("rate limit")) {
+        throw new Error("Too many requests");
       } else {
-        alert("로그인 실패: " + error.message);
+        throw error;
       }
-      return false;
     } else {
-      alert("로그인 성공!");
+      console.log("[SUCCESS] 로그인 성공");
+      ToastManager.show("로그인 성공!", "success", 2000);
+      
       // 로그인 성공 시 커스텀 이벤트 발생 (2초 이내 이동)
       setTimeout(() => {
         window.dispatchEvent(
@@ -283,9 +319,32 @@ export async function signInHandler(email, password) {
       }, 100); // 100ms 후 이동
       return true;
     }
-  } catch (e) {
-    console.error(e);
-    alert("예상치 못한 오류가 발생했습니다.");
+  } catch (error) {
+    console.error('[AUTH] 로그인 오류:', error);
+    
+    // AuthErrorHandler 사용 (main.js에서 import 필요)
+    if (typeof AuthErrorHandler !== 'undefined') {
+      AuthErrorHandler.showError(error, 'LOGIN');
+    } else {
+      // 폴백 처리
+      const errorMessages = {
+        'Invalid login credentials': '이메일 또는 비밀번호가 일치하지 않습니다.',
+        'Email not confirmed': '이메일 인증이 필요합니다. 이메일을 확인해주세요.',
+        'Too many requests': '너무 많은 요청이 발생했습니다. 잠시 후 다시 시도해주세요.',
+        'Failed to fetch': '네트워크 연결을 확인해주세요.',
+        '이메일과 비밀번호를 모두 입력해주세요.': '이메일과 비밀번호를 모두 입력해주세요.',
+        '유효한 이메일 형식이 아닙니다.': '유효한 이메일 형식이 아닙니다.'
+      };
+      
+      const userMessage = errorMessages[error.message] || `로그인 실패: ${error.message}`;
+      
+      if (typeof ToastManager !== 'undefined') {
+        ToastManager.show(userMessage, 'error', 8000);
+      } else {
+        alert(userMessage);
+      }
+    }
+    
     return false;
   }
 }
