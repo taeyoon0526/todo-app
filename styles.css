@@ -159,10 +159,11 @@ body {
   font-weight: 600;
   box-shadow: 0 2px 8px rgba(108, 99, 255, 0.15);
   transition: all 0.2s ease;
-  min-width: 150px;
+  min-width: 225px;
   /* 기본 버튼 너비 1.5배 증가 */
-  padding: 12px 24px;
+  padding: 18px 36px;
   /* 패딩도 늘려서 더 넓게 */
+  font-size: 1.25em;
 }
 
 .mdl-button--raised:hover {
@@ -171,67 +172,15 @@ body {
   transform: translateY(-1px);
 }
 
-/* TODO App Visibility */
-.todo-app-hidden {
-  display: none;
-}
-
-.todo-app-visible {
-  display: block;
-}
-
-/* TODO Card */
-.todo-card {
-  width: 100%;
-  min-width: 600px;
-  /* 340px에서 600px로 증가 */
-  min-height: 500px;
-  margin-top: 0;
-  box-shadow: none;
-  background: #fafdff;
-  border-radius: 24px;
-  padding-bottom: 32px;
-}
-
-.todo-card .mdl-card__title {
-  background: linear-gradient(135deg, #6c63ff 0%, #5ad1e6 100%);
-  color: white;
-  border-radius: 24px 24px 0 0;
-  padding: 48px 80px 32px 80px;
-  /* 좌우 패딩을 56px에서 80px로 증가 */
-}
-
-.todo-card .mdl-card__title-text {
-  margin: 0;
-  font-size: 1.6rem;
-  /* 1.4rem에서 1.6rem로 약간 증가 */
-  font-weight: 600;
-  text-align: center;
-  /* 중앙 정렬 추가 */
-}
-
-.todo-card .mdl-card__supporting-text {
-  padding: 48px 60px 18px 60px;
-  /* 좌우 패딩을 40px에서 60px로 증가 */
-}
-
-/* Filter Tabs */
-.filter-tabs {
-  display: flex;
-  gap: 18px;
-  margin-bottom: 28px;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
 .filter-btn {
   flex: 1;
-  min-width: 150px;
+  min-width: 225px;
   /* 100px에서 150px로 1.5배 증가 */
-  max-width: 180px;
+  max-width: 270px;
   /* 120px에서 180px로 1.5배 증가 */
-  padding: 12px 18px;
+  padding: 18px 27px;
   /* 패딩 추가로 더 넓게 */
+  font-size: 1.15em;
 }
 
 .filter-btn.active {
@@ -375,20 +324,24 @@ select:focus {
 }
 
 .date-field input[type="date"] {
-  min-width: 120px;
-  padding-left: 80px;
-  /* 마감일 라벨을 위한 공간 확보 */
+  min-width: 150px;
+  padding-left: 120px;
+  /* 마감일 라벨을 위한 공간을 더 넓게 확보 */
   text-align: left;
-  /* 텍스트 정렬 */
+  font-size: 1.15em;
+  height: 48px;
+  line-height: 48px;
+  box-sizing: border-box;
 }
 
 /* 마감일 라벨 위치 조정 */
 .date-field .mdl-textfield__label {
   left: 0;
-  /* 라벨을 왼쪽 끝에 위치 */
-  width: 70px;
-  /* 라벨 너비 지정 */
+  width: 100px;
+  /* 라벨 너비를 더 넓게 */
   text-align: left;
+  font-size: 1.1em;
+  line-height: 48px;
 }
 
 .priority-field select {
@@ -415,6 +368,11 @@ select:focus {
 .mdl-button--fab.mdl-button--mini-fab {
   background: #6c63ff;
   box-shadow: 0 2px 8px rgba(108, 99, 255, 0.25);
+  width: 72px;
+  height: 72px;
+  min-width: 72px;
+  min-height: 72px;
+  font-size: 2em;
 }
 
 .mdl-button--fab.mdl-button--mini-fab:hover {
@@ -776,8 +734,8 @@ select:focus {
   right: 24px;
   z-index: 1000;
   display: none !important;
-  width: 56px !important;
-  height: 56px !important;
+  width: 72px !important;
+  height: 72px !important;
   background: linear-gradient(45deg, #6c63ff, #5ad1e6) !important;
   box-shadow: 0 6px 20px rgba(108, 99, 255, 0.3) !important;
   touch-action: manipulation;
@@ -859,12 +817,12 @@ select:focus {
 }
 
 .mobile-add-buttons button {
-  min-width: 120px;
-  /* 80px에서 120px로 1.5배 증가 */
-  padding: 12px 18px;
-  /* 패딩도 증가 */
+  min-width: 180px;
+  padding: 18px 27px;
+  font-size: 1.15em;
 }
 
+/* 모바일에서의 반응형 디자인 */
 @media (max-width: 480px) {
   .mdl-layout__content {
     padding: 60px 8px 8px 8px;
@@ -979,9 +937,9 @@ select:focus {
   letter-spacing: 0.25px !important;
   transition: all 0.3s ease !important;
   box-shadow: 0 1px 3px rgba(60, 64, 67, 0.3) !important;
-  min-width: 225px !important;
+  min-width: 300px !important;
   /* 구글 버튼도 1.5배 넓게 */
-  padding: 12px 24px !important;
+  padding: 18px 36px !important;
   /* 패딩 추가 */
 }
 
