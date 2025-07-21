@@ -1,0 +1,22 @@
+{
+  "timestamp": "2025-07-21T18:49:10.798720",
+  "test_summary": {
+    "total_tests": 5,
+    "passed_tests": 2,
+    "failed_tests": 3,
+    "success_rate": "40.0%"
+  },
+  "browser_tests": {},
+  "mobile_tests": {
+    "mobile-ios-safari": "FAIL: HTML structure invalid",
+    "mobile-samsung-internet": "FAIL: HTML structure invalid",
+    "mobile-android-chrome": "FAIL: HTML structure invalid"
+  },
+  "performance": {
+    "response_times": "Request 1: 0.001221s\nRequest 2: 0.001010s\nRequest 3: 0.001123s\nRequest 4: 0.001435s\nRequest 5: 0.001119s"
+  },
+  "pwa": {
+    "manifest": "PASS: manifest.json valid",
+    "sw": "PASS: Service Worker found"
+  }
+}

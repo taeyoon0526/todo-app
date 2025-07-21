@@ -104,6 +104,39 @@ body {
   padding: 0;
 }
 
+/* TODO App 초기 상태 및 표시 제어 */
+#todo-app {
+  display: none;
+  /* 기본적으로 숨김 */
+}
+
+#todo-app.todo-app-visible {
+  display: block;
+  animation: fadeInUp 0.5s ease-out;
+}
+
+#todo-app.todo-app-hidden {
+  display: none;
+}
+
+/* 인증 섹션 초기 표시 */
+#auth-section {
+  display: block;
+}
+
+/* 애니메이션 */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .mdl-tabs__tab-bar {
   background: transparent;
   border-bottom: 2px solid #e0e0e0;

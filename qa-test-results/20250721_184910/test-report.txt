@@ -1,0 +1,27 @@
+TODO-LIST 모바일 환경 QA 테스트 결과
+==================================================
+
+테스트 실행 시간: 2025-07-21T18:49:10.798720
+전체 테스트: 5
+통과 테스트: 2
+실패 테스트: 3
+성공률: 40.0%
+
+브라우저 테스트 결과:
+
+모바일 시뮬레이션 테스트 결과:
+  mobile-ios-safari: FAIL: HTML structure invalid
+  mobile-samsung-internet: FAIL: HTML structure invalid
+  mobile-android-chrome: FAIL: HTML structure invalid
+
+PWA 기능 테스트 결과:
+  manifest: PASS: manifest.json valid
+  sw: PASS: Service Worker found
+
+성능 테스트 결과:
+  response_times:
+    Request 1: 0.001221s
+    Request 2: 0.001010s
+    Request 3: 0.001123s
+    Request 4: 0.001435s
+    Request 5: 0.001119s

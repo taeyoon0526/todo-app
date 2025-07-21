@@ -1,0 +1,19 @@
+# TODO-LIST Application - Robots.txt
+# This file tells search engine crawlers which pages they can access
+
+User-agent: *
+Allow: /
+Allow: /privacy.html
+Allow: /terms.html
+
+# Disallow sensitive files and directories
+Disallow: /scripts/
+Disallow: /.htaccess
+Disallow: /sw.js
+Disallow: /manifest.json
+
+# Sitemap location (update with actual domain)
+# Sitemap: https://your-domain.com/sitemap.xml
+
+# Crawl-delay to be respectful to the server
+Crawl-delay: 1

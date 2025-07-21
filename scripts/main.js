@@ -21,6 +21,7 @@ import {
   showTestNotification
 } from "./notifications.js";
 import { debounce, initializePerformanceOptimizations } from "./performance.js";
+import { initializeAuthGuard } from "./auth-guard.js";
 
 // 토스트 메시지 시스템
 const ToastManager = {
@@ -250,10 +251,153 @@ const AuthErrorHandler = {
   }
 };
 
+// 인증 상태 관리 변수들
+let isAuthChecked = false;
+let authCheckInProgress = false;
+
 // 세션 상태 관리 및 모니터링 시스템
 const SessionManager = {
   checkInterval: null,
   isMonitoring: false,
+  
+  // 초기 인증 상태 확인 (모바일 최적화)
+  async checkInitialAuth() {
+    if (authCheckInProgress) {
+      console.log('[AUTH] 이미 인증 체크가 진행 중입니다.');
+      return;
+    }
+    
+    authCheckInProgress = true;
+    console.log('[AUTH] 초기 인증 상태 확인 시작 (모바일 최적화)');
+    
+    try {
+      // 로딩 UI 표시
+      this.showAuthLoadingState();
+      
+      // Supabase 세션 확인 (타임아웃 설정으로 모바일 네트워크 지연 대응)
+      const sessionPromise = supabase.auth.getSession();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Session check timeout')), 5000)
+      );
+      
+      const { data: { session }, error } = await Promise.race([sessionPromise, timeoutPromise]);
+      
+      if (error) {
+        console.error('[AUTH] 세션 확인 오류:', error);
+        this.handleAuthCheckComplete(false);
+        return;
+      }
+      
+      // 세션 유효성 검사
+      if (session && session.user) {
+        const now = Math.floor(Date.now() / 1000);
+        
+        // 토큰 만료 확인
+        if (session.expires_at && session.expires_at <= now) {
+          console.warn('[AUTH] 만료된 세션 감지');
+          await supabase.auth.signOut();
+          this.handleAuthCheckComplete(false);
+          return;
+        }
+        
+        console.log('[AUTH] 유효한 세션 감지:', session.user.email);
+        this.handleAuthCheckComplete(true, session.user.id);
+      } else {
+        console.log('[AUTH] 세션 없음');
+        this.handleAuthCheckComplete(false);
+      }
+      
+    } catch (error) {
+      console.error('[AUTH] 인증 체크 중 예외:', error);
+      
+      // 네트워크 오류 처리
+      if (error.message === 'Session check timeout' || 
+          error.message.includes('fetch') || 
+          !navigator.onLine) {
+        console.warn('[AUTH] 네트워크 문제로 인한 인증 체크 실패');
+        ToastManager.show('네트워크 연결을 확인하고 새로고침해주세요.', 'warning', 8000);
+      }
+      
+      this.handleAuthCheckComplete(false);
+    }
+  },
+  
+  // 인증 체크 완료 처리
+  handleAuthCheckComplete(isAuthenticated, userId = null) {
+    authCheckInProgress = false;
+    isAuthChecked = true;
+    
+    console.log('[AUTH] 인증 체크 완료:', isAuthenticated ? '인증됨' : '미인증');
+    
+    // 로딩 UI 숨기기
+    this.hideAuthLoadingState();
+    
+    if (isAuthenticated && userId) {
+      showTodoApp(userId);
+    } else {
+      showAuthSection();
+    }
+  },
+  
+  // 인증 로딩 상태 표시 (모바일 UX 개선)
+  showAuthLoadingState() {
+    const authSection = document.getElementById("auth-section");
+    const todoApp = document.getElementById("todo-app");
+    
+    // 로딩 오버레이 생성
+    let loadingOverlay = document.getElementById('auth-loading-overlay');
+    if (!loadingOverlay) {
+      loadingOverlay = document.createElement('div');
+      loadingOverlay.id = 'auth-loading-overlay';
+      loadingOverlay.innerHTML = `
+        <div class="auth-loading-content">
+          <div class="mdl-spinner mdl-js-spinner is-active"></div>
+          <p style="margin-top: 16px; color: #666;">인증 상태를 확인하고 있습니다...</p>
+        </div>
+      `;
+      loadingOverlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.95);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        font-family: inherit;
+      `;
+      document.body.appendChild(loadingOverlay);
+      
+      // MDL 스피너 초기화
+      if (typeof componentHandler !== 'undefined') {
+        componentHandler.upgradeElement(loadingOverlay.querySelector('.mdl-spinner'));
+      }
+    }
+    
+    // 모든 섹션 숨기기
+    if (authSection) authSection.style.display = "none";
+    if (todoApp) {
+      todoApp.classList.remove("todo-app-visible");
+      todoApp.classList.add("todo-app-hidden");
+    }
+    
+    loadingOverlay.style.display = "flex";
+  },
+  
+  // 인증 로딩 상태 숨기기
+  hideAuthLoadingState() {
+    const loadingOverlay = document.getElementById('auth-loading-overlay');
+    if (loadingOverlay) {
+      loadingOverlay.style.display = "none";
+    }
+  },
+  
+  // 인증 체크 완료 여부 확인
+  isAuthCheckComplete() {
+    return isAuthChecked;
+  },
   
   // 세션 상태 지속적 모니터링 시작
   startMonitoring() {
@@ -392,104 +536,19 @@ window.addEventListener("DOMContentLoaded", async () => {
     componentHandler.upgradeDom();
   }
   
-  // 초기 세션 확인 및 유효성 검사
-  try {
-    const { data: { session }, error } = await supabase.auth.getSession();
-    
-    if (error) {
-      console.error('[INIT] 초기 세션 확인 오류:', error);
-      showAuthSection();
-      return;
-    }
-    
-    if (session && session.user) {
-      // 세션이 존재하면 유효성 검사
-      const now = Math.floor(Date.now() / 1000);
-      if (session.expires_at && session.expires_at <= now) {
-        console.warn('[INIT] 만료된 세션 감지, 로그인 화면으로 이동');
-        await supabase.auth.signOut();
-        showAuthSection();
-        return;
-      }
-      
-      console.log('[INIT] 유효한 세션 감지, 메인 화면으로 이동');
-      showTodoApp(session.user.id);
-    } else {
-      console.log('[INIT] 세션 없음, 로그인 화면 표시');
-      showAuthSection();
-    }
-  } catch (error) {
-    console.error('[INIT] 세션 초기화 중 예외:', error);
-    showAuthSection();
+  // AuthGuard 시스템 초기화 (기존 SessionManager 대체)
+  console.log('[MAIN] AuthGuard 시스템 초기화 시작');
+  const authGuard = initializeAuthGuard();
+  
+  if (!authGuard) {
+    console.error('[MAIN] AuthGuard 초기화 실패, 폴백 모드로 전환');
+    // 폴백: 기존 SessionManager 로직 사용
+    await SessionManager.checkInitialAuth();
+  } else {
+    console.log('[MAIN] AuthGuard 시스템 초기화 완료');
   }
   
-  // Auth 상태 변화 리스너 추가 (즉시 반응형)
-  supabase.auth.onAuthStateChange(async (event, session) => {
-    try {
-      console.log("[DEBUG] Auth state changed:", event, session);
-      
-      if (event === 'SIGNED_IN' && session && session.user) {
-        console.log("[INFO] 즉시 로그인 감지! 사용자:", session.user.email);
-        
-        try {
-          // 사용자 정보 DB에 저장 (upsert)
-          const saveResult = await saveUserInfo(session.user);
-          if (!saveResult.success) {
-            console.warn("[WARN] 사용자 정보 저장 실패, 계속 진행:", saveResult.error);
-            // 사용자 정보 저장 실패는 치명적이지 않으므로 계속 진행
-          }
-        } catch (userSaveError) {
-          console.error("[ERROR] 사용자 정보 저장 중 예외:", userSaveError);
-          // 계속 진행하되 에러 로그만 남김
-        }
-        
-        // 사용자 정보 저장 후 즉시 메인 화면으로 이동 (사용자 경험 개선)
-        showTodoApp(session.user.id);
-        
-      } else if (event === 'SIGNED_OUT') {
-        console.log("[INFO] 로그아웃 감지, 로그인 화면으로 이동");
-        showAuthSection();
-        
-      } else if (event === 'TOKEN_REFRESHED') {
-        if (session && session.user) {
-          console.log("[INFO] 토큰 갱신 성공");
-          // 이미 TODO 앱이 표시되어 있지 않다면 표시
-          const todoApp = document.getElementById("todo-app");
-          if (todoApp && todoApp.classList.contains("todo-app-hidden")) {
-            showTodoApp(session.user.id);
-          }
-        } else {
-          console.log("[INFO] 토큰 갱신 실패, 로그인 화면으로 이동");
-          AuthErrorHandler.showError(
-            new Error('Token refresh failed'), 
-            'TOKEN_REFRESH',
-            () => showAuthSection()
-          );
-          showAuthSection();
-        }
-      } else if (event === 'PASSWORD_RECOVERY') {
-        console.log("[INFO] 비밀번호 복구 이벤트");
-        ToastManager.show('비밀번호 복구 이메일을 확인해주세요.', 'info', 5000);
-        
-      } else if (event === 'USER_UPDATED') {
-        console.log("[INFO] 사용자 정보 업데이트");
-        
-      } else {
-        // 알 수 없는 이벤트 처리
-        console.warn("[WARN] 알 수 없는 인증 이벤트:", event);
-      }
-      
-    } catch (error) {
-      console.error("[ERROR] Auth state change 처리 중 예외:", error);
-      
-      // 치명적인 인증 상태 변화 에러 처리
-      AuthErrorHandler.showError(error, 'AUTH_STATE_CHANGE');
-      
-      // 안전을 위해 로그인 화면으로 이동
-      showAuthSection();
-    }
-  });
-  
+  // AuthGuard가 Supabase auth state change를 이미 처리하므로 별도 리스너 제거
   // 추가적인 세션 상태 모니터링 (팝업 로그인 완료 감지용)
   let sessionCheckInterval;
   
@@ -716,6 +775,42 @@ if (addForm) {
 }
 
 export async function loadTodos(userId) {
+  // 인증 체크가 완료되지 않았거나 사용자 ID가 없으면 데이터 로드 차단
+  if (!SessionManager.isAuthCheckComplete() || !userId) {
+    console.warn('[LOAD_TODOS] 인증 체크 미완료 또는 사용자 ID 없음, 데이터 로드 차단');
+    const todoList = document.getElementById("todo-list");
+    if (todoList) {
+      todoList.innerHTML = `
+        <div class="no-todos">
+          <i class="material-icons">info_outline</i>
+          <p>인증을 확인하고 있습니다...</p>
+        </div>
+      `;
+    }
+    return;
+  }
+  
+  // 추가 세션 유효성 검사 (모바일 환경 안전성 강화)
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    
+    if (error || !session || !session.user || session.user.id !== userId) {
+      console.warn('[LOAD_TODOS] 세션 유효성 검사 실패, 로그인 화면으로 이동');
+      SessionManager.handleSessionExpired('세션이 유효하지 않습니다. 다시 로그인해주세요.');
+      return;
+    }
+  } catch (error) {
+    console.error('[LOAD_TODOS] 세션 검증 중 예외:', error);
+    
+    // 네트워크 오류가 아닌 경우에만 세션 만료 처리
+    if (!error.message.includes('fetch') && navigator.onLine) {
+      SessionManager.handleSessionExpired('세션 검증 중 오류가 발생했습니다.');
+      return;
+    }
+    // 네트워크 오류인 경우 계속 진행 (오프라인 대응)
+    console.warn('[LOAD_TODOS] 네트워크 오류로 세션 검증 생략, 계속 진행');
+  }
+  
   const todoList = document.getElementById("todo-list");
   
   // 로딩 중이 아닌 경우에만 로딩 표시
