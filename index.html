@@ -36,6 +36,10 @@
         <span class="mdl-layout-title">TODO-LIST</span>
         <div class="mdl-layout-spacer"></div>
         <nav class="mdl-navigation">
+          <button id="theme-toggle" class="mdl-button mdl-js-button mdl-js-ripple-effect theme-toggle-btn"
+            title="다크 모드 토글" aria-label="테마 변경" role="button">
+            <i class="material-icons theme-icon">brightness_6</i>
+          </button>
           <button id="logout-button" class="mdl-button mdl-js-button mdl-js-ripple-effect logout-btn" title="로그아웃">
             <i class="material-icons">logout</i>
             <span class="logout-text">로그아웃</span>
@@ -385,13 +389,26 @@
         return;
       }
 
-      const success = await signUpHandler(email, password);
-      if (success) {
-        // 회원가입 및 자동 로그인 성공 시 폼 초기화
-        signupForm.reset();
-        hideFieldError(signupEmail, signupEmailError);
-        hideFieldError(signupPassword, signupPasswordError);
-        validateSignupForm();
+      // 회원가입 버튼 비활성화 (중복 요청 방지)
+      signupButton.disabled = true;
+      signupButton.textContent = "회원가입 중...";
+
+      try {
+        const success = await signUpHandler(email, password);
+        if (success) {
+          // 회원가입 및 자동 로그인 성공 시 폼 초기화
+          signupForm.reset();
+          hideFieldError(signupEmail, signupEmailError);
+          hideFieldError(signupPassword, signupPasswordError);
+          validateSignupForm();
+        }
+      } catch (error) {
+        console.error("[SIGNUP] 회원가입 처리 중 오류:", error);
+      } finally {
+        // 버튼 상태 복원
+        signupButton.disabled = false;
+        signupButton.textContent = "회원가입";
+        validateSignupForm(); // 버튼 상태 재검증
       }
     };
 
@@ -418,13 +435,26 @@
         return;
       }
 
-      const success = await signInHandler(email, password);
-      if (success) {
-        // 로그인 성공 시 폼 초기화
-        loginForm.reset();
-        hideFieldError(loginEmail, loginEmailError);
-        hideFieldError(loginPassword, loginPasswordError);
-        validateLoginForm();
+      // 로그인 버튼 비활성화 (중복 요청 방지)
+      loginButton.disabled = true;
+      loginButton.textContent = "로그인 중...";
+
+      try {
+        const success = await signInHandler(email, password);
+        if (success) {
+          // 로그인 성공 시 폼 초기화
+          loginForm.reset();
+          hideFieldError(loginEmail, loginEmailError);
+          hideFieldError(loginPassword, loginPasswordError);
+          validateLoginForm();
+        }
+      } catch (error) {
+        console.error("[LOGIN] 로그인 처리 중 오류:", error);
+      } finally {
+        // 버튼 상태 복원
+        loginButton.disabled = false;
+        loginButton.textContent = "로그인";
+        validateLoginForm(); // 버튼 상태 재검증
       }
     };
 

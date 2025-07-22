@@ -8,6 +8,9 @@
  * - 인증 성공 시 TodoList 컴포넌트 렌더링
  */
 
+import { supabase } from './api.js';
+import AuthUtils from './authUtils.js';
+
 class AuthGuard {
   constructor() {
     this.isAuthChecked = false;
@@ -64,19 +67,19 @@ class AuthGuard {
       this.handleAuthFailure();
     });
     
-    // Supabase 인증 상태 변경 이벤트 (안전한 접근)
-    if (typeof window.supabase !== 'undefined' && window.supabase.auth) {
-      window.supabase.auth.onAuthStateChange((event, session) => {
+    // Supabase 인증 상태 변경 리스너 등록
+    if (supabase && supabase.auth) {
+      supabase.auth.onAuthStateChange((event, session) => {
         console.log('[AUTH_GUARD] Supabase 인증 상태 변경:', event);
         this.handleSupabaseAuthChange(event, session);
       });
     } else {
-      console.warn('[AUTH_GUARD] Supabase 클라이언트를 찾을 수 없습니다');
+      console.error('[AUTH_GUARD] Supabase 클라이언트를 찾을 수 없습니다');
     }
   }
   
   /**
-   * 인증 상태 확인 (메인 로직)
+   * 인증 상태 확인 (메인 로직) - AuthUtils 사용
    */
   async checkAuthentication() {
     if (this.authCheckInProgress) {
@@ -91,11 +94,15 @@ class AuthGuard {
       // 1. 로딩 상태 표시
       this.showLoadingState();
       
-      // 2. Supabase 세션 확인 (타임아웃 적용)
-      const session = await this.getSessionWithTimeout();
+      // 2. AuthUtils를 사용하여 세션 확인
+      const { session, error } = await AuthUtils.checkSession();
+      
+      if (error) {
+        throw error;
+      }
       
       // 3. 세션 유효성 검사
-      const isValid = this.validateSession(session);
+      const isValid = AuthUtils.validateSession(session);
       
       // 4. 인증 결과 처리
       if (isValid && session.user) {
@@ -114,44 +121,10 @@ class AuthGuard {
   }
   
   /**
-   * 타임아웃이 적용된 세션 조회
-   */
-  async getSessionWithTimeout(timeout = 5000) {
-    // window.supabase로 안전하게 접근
-    if (typeof window.supabase === 'undefined' || !window.supabase.auth) {
-      throw new Error('Supabase 클라이언트가 초기화되지 않았습니다');
-    }
-    
-    const sessionPromise = window.supabase.auth.getSession();
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Session check timeout')), timeout)
-    );
-    
-    const { data: { session }, error } = await Promise.race([sessionPromise, timeoutPromise]);
-    
-    if (error) {
-      throw error;
-    }
-    
-    return session;
-  }
-  
-  /**
-   * 세션 유효성 검사
+   * 세션 유효성 검사 (AuthUtils 사용)
    */
   validateSession(session) {
-    if (!session || !session.user) {
-      return false;
-    }
-    
-    // 토큰 만료 확인
-    const now = Math.floor(Date.now() / 1000);
-    if (session.expires_at && session.expires_at <= now) {
-      console.warn('[AUTH_GUARD] 만료된 세션 감지');
-      return false;
-    }
-    
-    return true;
+    return AuthUtils.validateSession(session);
   }
   
   /**
@@ -177,7 +150,7 @@ class AuthGuard {
   }
   
   /**
-   * 인증 실패 처리
+   * 인증 실패 처리 (AuthUtils 사용)
    */
   async handleAuthFailure() {
     console.log('[AUTH_GUARD] 인증 실패 또는 로그아웃');
@@ -185,13 +158,11 @@ class AuthGuard {
     this.isAuthenticated = false;
     this.currentUserId = null;
     
-    // 토큰 정리 (안전한 접근)
-    if (typeof window.supabase !== 'undefined' && window.supabase.auth) {
-      try {
-        await window.supabase.auth.signOut();
-      } catch (error) {
-        console.warn('[AUTH_GUARD] 로그아웃 중 오류:', error);
-      }
+    // AuthUtils를 사용하여 로그아웃 처리
+    try {
+      await AuthUtils.signOut();
+    } catch (error) {
+      console.warn('[AUTH_GUARD] 로그아웃 중 오류:', error);
     }
     
     // UI 렌더링: 로그인 화면 표시
@@ -199,34 +170,18 @@ class AuthGuard {
   }
   
   /**
-   * 인증 오류 처리
+   * 인증 오류 처리 (AuthUtils 사용)
    */
   async handleAuthError(error) {
     console.error('[AUTH_GUARD] 인증 오류 처리:', error);
     
-    // 네트워크 오류 확인
-    if (this.isNetworkError(error)) {
+    // AuthUtils를 사용하여 네트워크 오류 확인
+    if (AuthUtils.isNetworkError(error)) {
       this.showNetworkError();
     } else {
       // 일반적인 인증 실패로 처리
       await this.handleAuthFailure();
     }
-  }
-  
-  /**
-   * 네트워크 오류 여부 확인
-   */
-  isNetworkError(error) {
-    const networkErrorPatterns = [
-      'Session check timeout',
-      'Failed to fetch',
-      'Network request failed',
-      'fetch failed'
-    ];
-    
-    return networkErrorPatterns.some(pattern => 
-      error.message.includes(pattern)
-    ) || !navigator.onLine;
   }
   
   /**

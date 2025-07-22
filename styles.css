@@ -9,6 +9,120 @@
  * See LICENSE file for full terms and conditions.
  */
 
+/* CSS Variables for Light/Dark Theme */
+:root {
+  /* Light Theme Colors */
+  --bg-primary: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  --bg-secondary: #ffffff;
+  --bg-card: #ffffff;
+  --bg-header: linear-gradient(90deg, #6c63ff 60%, #5ad1e6 100%);
+
+  --text-primary: #222222;
+  --text-secondary: #666666;
+  --text-muted: #999999;
+  --text-inverse: #ffffff;
+
+  --border-primary: #e0e0e0;
+  --border-secondary: #f0f0f0;
+
+  --shadow-primary: 0 16px 48px rgba(60, 60, 120, 0.16), 0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-secondary: 0 2px 8px rgba(108, 99, 255, 0.15);
+  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+  --accent-primary: #6c63ff;
+  --accent-secondary: #5ad1e6;
+  --accent-success: #4caf50;
+  --accent-warning: #ff9800;
+  --accent-danger: #f44336;
+
+  --btn-bg: #6c63ff;
+  --btn-hover: #5449d9;
+  --btn-text: #ffffff;
+
+  --input-bg: #ffffff;
+  --input-border: #e0e0e0;
+  --input-focus: #6c63ff;
+
+  --overlay-bg: rgba(255, 255, 255, 0.95);
+  --backdrop: rgba(0, 0, 0, 0.5);
+}
+
+/* Dark Theme Colors */
+[data-theme="dark"] {
+  --bg-primary: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  --bg-secondary: #1e1e1e;
+  --bg-card: #2d2d2d;
+  --bg-header: linear-gradient(90deg, #4c4499 60%, #2b7a8b 100%);
+
+  --text-primary: #e0e0e0;
+  --text-secondary: #b0b0b0;
+  --text-muted: #888888;
+  --text-inverse: #ffffff;
+
+  --border-primary: #404040;
+  --border-secondary: #333333;
+
+  --shadow-primary: 0 16px 48px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.2);
+  --shadow-secondary: 0 2px 8px rgba(76, 68, 153, 0.3);
+  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.3);
+
+  --accent-primary: #7c73ff;
+  --accent-secondary: #6ae4ff;
+  --accent-success: #66bb6a;
+  --accent-warning: #ffb74d;
+  --accent-danger: #ef5350;
+
+  --btn-bg: #7c73ff;
+  --btn-hover: #6b5dff;
+  --btn-text: #ffffff;
+
+  --input-bg: #2d2d2d;
+  --input-border: #404040;
+  --input-focus: #7c73ff;
+
+  --overlay-bg: rgba(30, 30, 30, 0.95);
+  --backdrop: rgba(0, 0, 0, 0.7);
+}
+
+/* Automatic dark mode based on system preference */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg-primary: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    --bg-secondary: #1e1e1e;
+    --bg-card: #2d2d2d;
+    --bg-header: linear-gradient(90deg, #4c4499 60%, #2b7a8b 100%);
+
+    --text-primary: #e0e0e0;
+    --text-secondary: #b0b0b0;
+    --text-muted: #888888;
+    --text-inverse: #ffffff;
+
+    --border-primary: #404040;
+    --border-secondary: #333333;
+
+    --shadow-primary: 0 16px 48px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.2);
+    --shadow-secondary: 0 2px 8px rgba(76, 68, 153, 0.3);
+    --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.3);
+
+    --accent-primary: #7c73ff;
+    --accent-secondary: #6ae4ff;
+    --accent-success: #66bb6a;
+    --accent-warning: #ffb74d;
+    --accent-danger: #ef5350;
+
+    --btn-bg: #7c73ff;
+    --btn-hover: #6b5dff;
+    --btn-text: #ffffff;
+
+    --input-bg: #2d2d2d;
+    --input-border: #404040;
+    --input-focus: #7c73ff;
+
+    --overlay-bg: rgba(30, 30, 30, 0.95);
+    --backdrop: rgba(0, 0, 0, 0.7);
+  }
+}
+
 /* Reset & Base */
 * {
   box-sizing: border-box;
@@ -18,9 +132,10 @@ body {
   margin: 0;
   padding: 0;
   font-family: "Roboto", "Inter", "Noto Sans KR", Arial, sans-serif;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  color: #222;
+  background: var(--bg-primary);
+  color: var(--text-primary);
   min-height: 100vh;
+  transition: background 0.3s ease, color 0.3s ease;
 }
 
 /* MDL Layout Overrides */
@@ -31,13 +146,14 @@ body {
 }
 
 .mdl-layout__header {
-  background: linear-gradient(90deg, #6c63ff 60%, #5ad1e6 100%);
-  box-shadow: 0 2px 8px rgba(108, 99, 255, 0.15);
+  background: var(--bg-header);
+  box-shadow: var(--shadow-secondary);
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   z-index: 1000;
+  transition: background 0.3s ease, box-shadow 0.3s ease;
 }
 
 /* 로그아웃 버튼 스타일 */
@@ -48,26 +164,31 @@ body {
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  border-radius: 20px;
-  font-size: 14px;
-  font-weight: 500;
 }
 
-.logout-btn:hover {
-  opacity: 0.8;
-  background-color: rgba(255, 255, 255, 0.1);
+/* 테마 토글 버튼 스타일 */
+.theme-toggle-btn {
+  color: var(--text-inverse) !important;
+  padding: 8px !important;
+  min-width: auto !important;
+  border-radius: 50% !important;
+  transition: all 0.3s ease !important;
+  margin-right: 8px !important;
 }
 
-.logout-btn.visible {
-  display: inline-flex !important;
+.theme-toggle-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  transform: rotate(180deg);
 }
 
-.logout-btn .material-icons {
-  font-size: 20px;
+.theme-toggle-btn .theme-icon {
+  font-size: 20px !important;
+  transition: transform 0.3s ease;
 }
 
-.logout-text {
-  margin-left: 4px;
+/* 다크 모드 전환 애니메이션 */
+* {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .mdl-layout__content {

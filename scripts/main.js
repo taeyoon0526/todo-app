@@ -12,6 +12,7 @@
 // scripts/main.js
 import { supabase, saveUserInfo } from "./api.js";
 import { getDDay, getDDayClass, convertToUTCISO, convertFromUTCISO, isValidDate } from "./utils.js";
+import AuthUtils from './authUtils.js';
 import { 
   requestNotificationPermission, 
   startNotificationScheduler, 
@@ -22,92 +23,447 @@ import {
 } from "./notifications.js";
 import { debounce, initializePerformanceOptimizations } from "./performance.js";
 import { initializeAuthGuard } from "./auth-guard.js";
+import { skeletonLoader } from "../components/LoadingSkeleton.js";
+import { errorToast } from "../components/ErrorToast.js";
 
-// 토스트 메시지 시스템
-const ToastManager = {
-  show(message, type = 'error', duration = 5000) {
-    const container = document.getElementById('toast-container');
-    const toast = document.getElementById('toast-message');
-    const text = document.getElementById('toast-text');
-    const closeBtn = document.getElementById('toast-close');
+// 다크 모드 관리 시스템
+const ThemeManager = {
+  themes: {
+    LIGHT: 'light',
+    DARK: 'dark',
+    AUTO: 'auto'
+  },
+  
+  currentTheme: 'auto',
+  systemPrefersDark: false,
+  
+  // 초기화
+  init() {
+    console.log('[THEME] 다크 모드 시스템 초기화');
     
-    if (!container || !toast || !text || !closeBtn) {
-      console.error('[TOAST] 토스트 메시지 요소를 찾을 수 없습니다');
-      // 폴백으로 브라우저 alert 사용
-      alert(message);
+    // 시스템 테마 감지
+    this.detectSystemTheme();
+    
+    // 저장된 사용자 설정 로드
+    this.loadUserPreference();
+    
+    // 초기 테마 적용
+    this.applyTheme();
+    
+    // 토글 버튼 이벤트 연결
+    this.setupToggleButton();
+    
+    // 시스템 테마 변경 감지
+    this.watchSystemTheme();
+    
+    console.log(`[THEME] 초기 테마 설정 완료: ${this.currentTheme}`);
+  },
+  
+  // 시스템 테마 감지
+  detectSystemTheme() {
+    if (window.matchMedia) {
+      this.systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      console.log(`[THEME] 시스템 테마 감지: ${this.systemPrefersDark ? 'dark' : 'light'}`);
+    }
+  },
+  
+  // 사용자 설정 로드
+  loadUserPreference() {
+    try {
+      const savedTheme = localStorage.getItem('todo-app-theme');
+      if (savedTheme && Object.values(this.themes).includes(savedTheme)) {
+        this.currentTheme = savedTheme;
+        console.log(`[THEME] 저장된 테마 로드: ${savedTheme}`);
+      } else {
+        this.currentTheme = this.themes.AUTO;
+        console.log('[THEME] 기본 테마(자동) 설정');
+      }
+    } catch (error) {
+      console.warn('[THEME] 사용자 설정 로드 실패:', error);
+      this.currentTheme = this.themes.AUTO;
+    }
+  },
+  
+  // 사용자 설정 저장
+  saveUserPreference() {
+    try {
+      localStorage.setItem('todo-app-theme', this.currentTheme);
+      console.log(`[THEME] 테마 설정 저장: ${this.currentTheme}`);
+    } catch (error) {
+      console.warn('[THEME] 테마 설정 저장 실패:', error);
+    }
+  },
+  
+  // 테마 적용
+  applyTheme() {
+    const root = document.documentElement;
+    const body = document.body;
+    
+    // 현재 테마에 따른 실제 적용 테마 결정
+    let appliedTheme;
+    if (this.currentTheme === this.themes.AUTO) {
+      appliedTheme = this.systemPrefersDark ? this.themes.DARK : this.themes.LIGHT;
+    } else {
+      appliedTheme = this.currentTheme;
+    }
+    
+    // data-theme 속성 설정
+    root.setAttribute('data-theme', appliedTheme);
+    
+    // body 클래스 업데이트 (애니메이션을 위해)
+    body.classList.remove('theme-light', 'theme-dark');
+    body.classList.add(`theme-${appliedTheme}`);
+    
+    // 토글 버튼 아이콘 업데이트
+    this.updateToggleButton(appliedTheme);
+    
+    // PWA 테마 색상 업데이트
+    this.updatePWAThemeColor(appliedTheme);
+    
+    console.log(`[THEME] 테마 적용 완료: ${this.currentTheme} → ${appliedTheme}`);
+  },
+  
+  // 토글 버튼 설정
+  setupToggleButton() {
+    const toggleButton = document.getElementById('theme-toggle');
+    if (!toggleButton) {
+      console.warn('[THEME] 테마 토글 버튼을 찾을 수 없습니다');
       return;
     }
     
-    // 기존 토스트 제거
-    this.hide();
+    // 클릭 이벤트
+    toggleButton.addEventListener('click', () => {
+      this.toggleTheme();
+    });
     
-    // 메시지 설정
-    text.textContent = message;
+    // 키보드 접근성 (Enter, Space 키)
+    toggleButton.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        this.toggleTheme();
+      }
+    });
     
-    // 타입별 클래스 설정
-    toast.className = `toast-message ${type}`;
-    
-    // 토스트 표시
-    toast.classList.remove('hidden');
-    
-    console.log(`[TOAST] ${type.toUpperCase()}: ${message}`);
-    
-    // 자동 숨김
-    if (duration > 0) {
-      setTimeout(() => {
-        this.hide();
-      }, duration);
-    }
-    
-    // 닫기 버튼 이벤트
-    closeBtn.onclick = () => {
-      this.hide();
-    };
+    // 초기 버튼 상태 설정
+    this.updateToggleButton();
   },
   
-  hide() {
-    const toast = document.getElementById('toast-message');
-    if (toast) {
-      toast.style.animation = 'slideOutToast 0.3s ease-in';
-      setTimeout(() => {
-        toast.classList.add('hidden');
-        toast.style.animation = '';
-      }, 300);
+  // 토글 버튼 아이콘 업데이트
+  updateToggleButton(appliedTheme = null) {
+    const toggleButton = document.getElementById('theme-toggle');
+    const themeIcon = document.querySelector('.theme-icon');
+    
+    if (!toggleButton || !themeIcon) return;
+    
+    // 실제 적용된 테마 확인
+    if (!appliedTheme) {
+      if (this.currentTheme === this.themes.AUTO) {
+        appliedTheme = this.systemPrefersDark ? this.themes.DARK : this.themes.LIGHT;
+      } else {
+        appliedTheme = this.currentTheme;
+      }
     }
+    
+    // 아이콘과 툴팁 업데이트
+    if (this.currentTheme === this.themes.AUTO) {
+      themeIcon.textContent = 'brightness_auto';
+      toggleButton.title = `자동 모드 (현재: ${appliedTheme === this.themes.DARK ? '다크' : '라이트'})`;
+    } else if (appliedTheme === this.themes.DARK) {
+      themeIcon.textContent = 'dark_mode';
+      toggleButton.title = '다크 모드 (클릭: 라이트 모드)';
+    } else {
+      themeIcon.textContent = 'light_mode';
+      toggleButton.title = '라이트 모드 (클릭: 자동 모드)';
+    }
+  },
+  
+  // 테마 토글
+  toggleTheme() {
+    // 순환: light → dark → auto → light
+    switch (this.currentTheme) {
+      case this.themes.LIGHT:
+        this.currentTheme = this.themes.DARK;
+        break;
+      case this.themes.DARK:
+        this.currentTheme = this.themes.AUTO;
+        break;
+      case this.themes.AUTO:
+        this.currentTheme = this.themes.LIGHT;
+        break;
+      default:
+        this.currentTheme = this.themes.AUTO;
+    }
+    
+    console.log(`[THEME] 테마 토글: ${this.currentTheme}`);
+    
+    // 토스트 알림
+    const themeNames = {
+      [this.themes.LIGHT]: '라이트 모드',
+      [this.themes.DARK]: '다크 모드',
+      [this.themes.AUTO]: '자동 모드'
+    };
+    
+    errorToast.success(`${themeNames[this.currentTheme]}로 변경되었습니다.`, {
+      duration: 2000
+    });
+    
+    // 설정 저장 및 테마 적용
+    this.saveUserPreference();
+    this.applyTheme();
+  },
+  
+  // 시스템 테마 변경 감지
+  watchSystemTheme() {
+    if (!window.matchMedia) return;
+    
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    
+    const handleChange = (e) => {
+      const wasSystemDark = this.systemPrefersDark;
+      this.systemPrefersDark = e.matches;
+      
+      console.log(`[THEME] 시스템 테마 변경 감지: ${this.systemPrefersDark ? 'dark' : 'light'}`);
+      
+      // 자동 모드인 경우에만 테마 재적용
+      if (this.currentTheme === this.themes.AUTO && wasSystemDark !== this.systemPrefersDark) {
+        this.applyTheme();
+        
+        const newTheme = this.systemPrefersDark ? '다크' : '라이트';
+        errorToast.info(`시스템 테마가 ${newTheme} 모드로 변경되었습니다.`, {
+          duration: 3000
+        });
+      }
+    };
+    
+    // 이벤트 리스너 등록
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handleChange);
+    } else {
+      // 구형 브라우저 호환성
+      mediaQuery.addListener(handleChange);
+    }
+  },
+  
+  // PWA 테마 색상 업데이트
+  updatePWAThemeColor(appliedTheme) {
+    const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+    if (!themeColorMeta) return;
+    
+    const colors = {
+      [this.themes.LIGHT]: '#6c63ff',
+      [this.themes.DARK]: '#4c4499'
+    };
+    
+    themeColorMeta.content = colors[appliedTheme] || colors[this.themes.LIGHT];
+  },
+  
+  // 현재 테마 정보 반환
+  getCurrentTheme() {
+    let actualTheme;
+    if (this.currentTheme === this.themes.AUTO) {
+      actualTheme = this.systemPrefersDark ? this.themes.DARK : this.themes.LIGHT;
+    } else {
+      actualTheme = this.currentTheme;
+    }
+    
+    return {
+      setting: this.currentTheme,
+      actual: actualTheme,
+      isAuto: this.currentTheme === this.themes.AUTO,
+      systemPrefersDark: this.systemPrefersDark
+    };
   }
 };
 
+// 전역 접근을 위한 디버깅 함수들
+window.ThemeManager = ThemeManager;
+window.getThemeInfo = () => ThemeManager.getCurrentTheme();
+window.toggleTheme = () => ThemeManager.toggleTheme();
+
+// 토스트 메시지 시스템 (ErrorToast와 호환성 유지)
+const ToastManager = {
+  show(message, type = 'error', duration = 5000) {
+    // 새로운 ErrorToast 시스템 사용
+    return errorToast.show(message, type, { duration });
+  },
+  
+  hide() {
+    // 모든 토스트 숨기기
+    errorToast.hideAll();
+  },
+  
+  // 편의 메서드들
+  success(message, duration = 3000) {
+    return errorToast.success(message, { duration });
+  },
+  
+  error(message, duration = 6000) {
+    return errorToast.error(message, { duration });
+  },
+  
+  warning(message, duration = 5000) {
+    return errorToast.warning(message, { duration });
+  },
+  
+  info(message, duration = 4000) {
+    return errorToast.info(message, { duration });
+  }
+};
+
+// 전역 에러 핸들러 및 네트워크 감지
+function setupGlobalErrorHandling() {
+  // API 에러 처리를 위한 전역 함수
+  window.handleNetworkError = (error) => {
+    console.error('[NETWORK] 네트워크 오류:', error);
+    
+    if (!navigator.onLine) {
+      errorToast.offline('현재 오프라인 상태입니다. 인터넷 연결을 확인해주세요.', {
+        persistent: true,
+        actions: [
+          {
+            text: '새로고침',
+            action: () => window.location.reload()
+          }
+        ]
+      });
+    } else if (error.message.includes('fetch')) {
+      errorToast.networkError('서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.', {
+        actions: [
+          {
+            text: '다시 시도',
+            action: () => window.location.reload()
+          }
+        ]
+      });
+    } else {
+      errorToast.error(`네트워크 오류: ${error.message}`, {
+        title: '연결 오류'
+      });
+    }
+  };
+  
+  // Fetch API 에러 감지 (인증 에러 처리 강화)
+  const originalFetch = window.fetch;
+  window.fetch = async (...args) => {
+    try {
+      const response = await originalFetch(...args);
+      
+      // 응답 상태 코드 체크
+      if (!response.ok) {
+        // 인증 관련 에러 처리
+        if (response.status === 401) {
+          AuthErrorHandler.showError({
+            code: '401',
+            message: 'Unauthorized'
+          }, 'FETCH_401_ERROR');
+        } else if (response.status === 403) {
+          AuthErrorHandler.showError({
+            code: '403', 
+            message: 'Forbidden'
+          }, 'FETCH_403_ERROR');
+        } else if (response.status >= 500) {
+          errorToast.networkError(`서버 오류 (${response.status}): 잠시 후 다시 시도해주세요.`);
+        } else if (response.status === 429) {
+          AuthErrorHandler.showError({
+            code: '429',
+            message: 'Too many requests'
+          }, 'FETCH_RATE_LIMIT');
+        } else if (response.status >= 400) {
+          errorToast.warning(`요청 오류 (${response.status}): 요청을 확인해주세요.`);
+        }
+      }
+      
+      return response;
+    } catch (error) {
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        window.handleNetworkError(error);
+      }
+      throw error;
+    }
+  };
+  
+  // 모바일 환경에서 앱 포커스 시 세션 검증 (AuthUtils 사용)
+  if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+    // 모바일 디바이스 감지
+    window.addEventListener('focus', async () => {
+      console.log('[MOBILE] 앱 포커스 감지 - 세션 검증 시작');
+      
+      try {
+        const { session, error } = await AuthUtils.checkSession();
+        
+        if (error || !AuthUtils.validateSession(session)) {
+          AuthErrorHandler.showError({
+            message: 'Session validation failed',
+            code: '401'
+          }, 'MOBILE_FOCUS_CHECK');
+        }
+      } catch (error) {
+        console.warn('[MOBILE] 포커스 시 세션 검증 실패:', error);
+      }
+    });
+    
+    // 모바일에서 네트워크 상태 변경 감지
+    window.addEventListener('online', () => {
+      console.log('[MOBILE] 네트워크 온라인 감지');
+      errorToast.success('인터넷 연결이 복구되었습니다.', {
+        title: '연결 복구',
+        duration: 3000
+      });
+    });
+    
+    window.addEventListener('offline', () => {
+      console.log('[MOBILE] 네트워크 오프라인 감지');
+      errorToast.offline('인터넷 연결이 끊어졌습니다.\n일부 기능이 제한될 수 있습니다.', {
+        title: '오프라인 모드',
+        persistent: true
+      });
+    });
+  }
+  
+  console.log('[MAIN] 전역 에러 핸들링 설정 완료');
+}
+
 // 인증 에러 처리 및 사용자 친화적 메시지 시스템
 const AuthErrorHandler = {
-  // 에러 코드별 메시지 매핑
+  // 에러 코드별 메시지 매핑 (모바일 UX 최적화)
   errorMessages: {
+    // 세션 관련 에러
+    'Session expired': '로그인이 만료되었습니다.\n다시 로그인해주세요.',
+    'Invalid session': '세션이 유효하지 않습니다.\n다시 로그인해주세요.',
+    'Token refresh failed': '인증 갱신에 실패했습니다.\n다시 로그인해주세요.',
+    'JWT': '로그인이 필요합니다.\n다시 로그인해주세요.',
+    'permission denied': '접근 권한이 없습니다.\n로그인 후 다시 시도해주세요.',
+    'access_token': '인증 토큰이 유효하지 않습니다.\n다시 로그인해주세요.',
+    'unauthorized': '인증이 필요합니다.\n로그인해주세요.',
+    
     // 네트워크 관련 에러
-    'Failed to fetch': '네트워크 연결을 확인해주세요. 인터넷 연결 상태를 점검하고 다시 시도해주세요.',
-    'Network request failed': '네트워크 요청이 실패했습니다. 연결 상태를 확인하고 다시 시도해주세요.',
-    'TypeError: fetch failed': '네트워크 연결에 문제가 있습니다. 인터넷 연결을 확인해주세요.',
+    'Failed to fetch': '인터넷 연결을 확인해주세요.\n Wi-Fi 또는 모바일 데이터를 확인하고 다시 시도해주세요.',
+    'Network request failed': '네트워크 요청이 실패했습니다.\n연결 상태를 확인하고 다시 시도해주세요.',
+    'TypeError: fetch failed': '네트워크 연결에 문제가 있습니다.\n인터넷 연결을 확인해주세요.',
+    'NetworkError': '네트워크 오류가 발생했습니다.\n잠시 후 다시 시도해주세요.',
     
     // OAuth 관련 에러
-    'OAuth authorization denied': '구글 로그인 권한이 거부되었습니다. 다시 시도하거나 다른 계정을 사용해주세요.',
-    'OAuth URL을 받을 수 없습니다': '구글 로그인 설정에 문제가 있습니다. 잠시 후 다시 시도해주세요.',
-    'OAuth session expired': '구글 로그인 세션이 만료되었습니다. 다시 로그인해주세요.',
-    'popup_closed_by_user': '팝업이 닫혔습니다. 로그인을 완료하려면 다시 시도해주세요.',
+    'OAuth authorization denied': '구글 로그인이 취소되었습니다.\n다시 시도하거나 이메일 로그인을 이용해주세요.',
+    'OAuth URL을 받을 수 없습니다': '구글 로그인 설정에 문제가 있습니다.\n잠시 후 다시 시도해주세요.',
+    'OAuth session expired': '구글 로그인 세션이 만료되었습니다.\n다시 로그인해주세요.',
+    'popup_closed_by_user': '로그인 창이 닫혔습니다.\n다시 시도해주세요.',
+    'authorization': '인증 과정에서 오류가 발생했습니다.\n다시 시도해주세요.',
     
-    // 인증 관련 에러  
-    'Invalid login credentials': '이메일 또는 비밀번호가 일치하지 않습니다. 입력 정보를 확인해주세요.',
-    'Email not confirmed': '이메일 인증이 필요합니다. 받은 인증 메일을 확인해주세요.',
-    'User already registered': '이미 가입된 이메일입니다. 로그인을 시도해보세요.',
-    'Signup disabled': '현재 회원가입이 비활성화되어 있습니다. 관리자에게 문의해주세요.',
-    'Too many requests': '너무 많은 요청이 발생했습니다. 잠시 후 다시 시도해주세요.',
+    // 로그인 관련 에러  
+    'Invalid login credentials': '이메일 또는 비밀번호가 일치하지 않습니다.\n입력 정보를 확인해주세요.',
+    'Email not confirmed': '이메일 인증이 필요합니다.\n받은 인증 메일을 확인해주세요.',
+    'User already registered': '이미 가입된 이메일입니다.\n로그인을 시도해보세요.',
+    'Signup disabled': '현재 회원가입이 비활성화되어 있습니다.\n잠시 후 다시 시도해주세요.',
     
-    // 세션 관련 에러
-    'Session expired': '세션이 만료되었습니다. 다시 로그인해주세요.',
-    'Invalid session': '세션이 유효하지 않습니다. 다시 로그인해주세요.',
-    'Token refresh failed': '토큰 갱신에 실패했습니다. 다시 로그인해주세요.',
+    // 요청 제한 에러
+    'Too many requests': '너무 많은 요청이 발생했습니다.\n잠시 기다린 후 다시 시도해주세요.',
+    'Rate limit': '요청이 제한되었습니다.\n잠시 후 다시 시도해주세요.',
     
-    // 기타 에러
-    'Unknown error': '알 수 없는 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
-    'Server error': '서버에 문제가 발생했습니다. 잠시 후 다시 시도해주세요.',
-    'Service unavailable': '서비스를 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해주세요.'
+    // 서버 관련 에러
+    'Unknown error': '알 수 없는 오류가 발생했습니다.\n잠시 후 다시 시도해주세요.',
+    'Server error': '서버에 일시적인 문제가 발생했습니다.\n잠시 후 다시 시도해주세요.',
+    'Service unavailable': '서비스를 일시적으로 사용할 수 없습니다.\n잠시 후 다시 시도해주세요.',
+    'Internal server error': '서버 내부 오류가 발생했습니다.\n잠시 후 다시 시도해주세요.'
   },
   
   // 에러 메시지 추출 및 사용자 친화적 메시지 반환
@@ -142,112 +498,187 @@ const AuthErrorHandler = {
     return `오류가 발생했습니다: ${errorMessage}\n\n문제가 지속되면 고객센터로 문의해주세요.`;
   },
   
-  // 에러 표시 (토스트 + 재시도 옵션)
+  // 에러 표시 (ErrorToast 시스템 사용)
   showError(error, context = '', retryCallback = null) {
     const userMessage = this.getErrorMessage(error);
     
     console.error(`[AUTH_ERROR][${context}]`, error);
     
-    // 재시도 가능한 에러인지 확인
-    const isRetryable = this.isRetryableError(error);
+    // 에러 타입에 따른 세분화된 처리
+    const errorType = this.getErrorType(error);
     
-    if (isRetryable && retryCallback) {
-      // 재시도 가능한 에러는 토스트에 재시도 버튼 표시
-      this.showRetryableError(userMessage, retryCallback, context);
+    switch (errorType) {
+      case 'SESSION_EXPIRED':
+        this.showSessionExpiredError(userMessage, retryCallback);
+        break;
+      case 'PERMISSION_DENIED':
+        this.showPermissionDeniedError(userMessage);
+        break;
+      case 'NETWORK_ERROR':
+        this.showNetworkError(userMessage, retryCallback);
+        break;
+      case 'OAUTH_ERROR':
+        this.showOAuthError(userMessage, retryCallback);
+        break;
+      case 'RATE_LIMIT':
+        this.showRateLimitError(userMessage);
+        break;
+      default:
+        this.showGenericError(userMessage, retryCallback);
+    }
+  },
+  
+  // 에러 타입 분류
+  getErrorType(error) {
+    if (!error) return 'UNKNOWN';
+    
+    const errorMessage = (error.message || error.error_description || error.error || error.toString()).toLowerCase();
+    const errorCode = error.code || error.status;
+    
+    // HTTP 상태 코드 기반 분류
+    if (errorCode === 401 || errorCode === '401') return 'SESSION_EXPIRED';
+    if (errorCode === 403 || errorCode === '403') return 'PERMISSION_DENIED';
+    if (errorCode === 429 || errorCode === '429') return 'RATE_LIMIT';
+    
+    // 메시지 기반 분류
+    if (errorMessage.includes('jwt') || errorMessage.includes('session') || errorMessage.includes('expired')) {
+      return 'SESSION_EXPIRED';
+    }
+    if (errorMessage.includes('permission') || errorMessage.includes('unauthorized')) {
+      return 'PERMISSION_DENIED';
+    }
+    if (errorMessage.includes('network') || errorMessage.includes('fetch') || errorMessage.includes('connection')) {
+      return 'NETWORK_ERROR';
+    }
+    if (errorMessage.includes('oauth') || errorMessage.includes('authorization') || errorMessage.includes('popup')) {
+      return 'OAUTH_ERROR';
+    }
+    if (errorMessage.includes('too many') || errorMessage.includes('rate limit')) {
+      return 'RATE_LIMIT';
+    }
+    
+    return 'GENERIC';
+  },
+  
+  // 세션 만료 에러 처리
+  showSessionExpiredError(message, retryCallback) {
+    errorToast.warning(message, {
+      title: '세션 만료',
+      persistent: true,
+      actions: [
+        {
+          text: '다시 로그인',
+          action: () => {
+            supabase.auth.signOut();
+            showAuthSection();
+          }
+        }
+      ]
+    });
+  },
+  
+  // 권한 거부 에러 처리
+  showPermissionDeniedError(message) {
+    errorToast.error(message, {
+      title: '접근 권한 없음',
+      duration: 8000,
+      actions: [
+        {
+          text: '로그인 화면',
+          action: () => {
+            supabase.auth.signOut();
+            showAuthSection();
+          }
+        }
+      ]
+    });
+  },
+  
+  // 네트워크 에러 처리
+  showNetworkError(message, retryCallback) {
+    if (retryCallback) {
+      errorToast.networkError(message, {
+        actions: [
+          {
+            text: '다시 시도',
+            action: retryCallback
+          }
+        ]
+      });
     } else {
-      // 일반 에러는 기본 토스트 표시
-      ToastManager.show(userMessage, 'error', 8000);
+      errorToast.networkError(message);
     }
   },
   
-  // 재시도 가능한 에러 확인
-  isRetryableError(error) {
-    if (!error) return false;
-    
-    const errorMessage = error.message || error.toString();
-    const retryablePatterns = [
-      'network', 'fetch', 'connection', 'timeout', 'server error', 'service unavailable',
-      'too many requests', 'oauth url', 'popup_closed'
-    ];
-    
-    return retryablePatterns.some(pattern => 
-      errorMessage.toLowerCase().includes(pattern.toLowerCase())
-    );
+  // OAuth 에러 처리
+  showOAuthError(message, retryCallback) {
+    if (retryCallback) {
+      errorToast.warning(message, {
+        title: '인증 오류',
+        actions: [
+          {
+            text: '다시 시도',
+            action: retryCallback
+          },
+          {
+            text: '이메일 로그인',
+            action: () => {
+              // 이메일 로그인 폼으로 전환
+              const googleBtn = document.querySelector('.google-login-btn');
+              const emailForm = document.querySelector('.auth-form');
+              if (googleBtn) googleBtn.style.display = 'none';
+              if (emailForm) emailForm.style.display = 'block';
+            }
+          }
+        ]
+      });
+    } else {
+      errorToast.warning(message, {
+        title: '인증 오류'
+      });
+    }
   },
   
-  // 재시도 가능한 에러 UI 표시
-  showRetryableError(message, retryCallback, context) {
-    // 기존 토스트 숨기기
-    ToastManager.hide();
-    
-    // 재시도 버튼이 포함된 커스텀 토스트 생성
-    const toast = document.getElementById('toast-message');
-    const text = document.getElementById('toast-text');
-    
-    if (!toast || !text) {
-      if (confirm(message + '\n\n다시 시도하시겠습니까?')) {
-        retryCallback();
-      }
-      return;
-    }
-    
-    // 메시지 + 재시도 버튼 HTML 생성
-    text.innerHTML = `
-      <div class="error-message">${message}</div>
-      <div class="error-actions" style="margin-top: 12px;">
-        <button class="retry-btn mdl-button mdl-js-button mdl-button--raised mdl-button--colored" 
-                style="margin-right: 8px; font-size: 12px; padding: 4px 12px;">
-          다시 시도
-        </button>
-        <button class="contact-btn mdl-button mdl-js-button" 
-                style="font-size: 12px; padding: 4px 12px;">
-          문의하기
-        </button>
-      </div>
-    `;
-    
-    // 토스트 표시
-    toast.className = 'toast-message error';
-    toast.classList.remove('hidden');
-    
-    // 이벤트 리스너 추가
-    const retryBtn = text.querySelector('.retry-btn');
-    const contactBtn = text.querySelector('.contact-btn');
-    
-    if (retryBtn) {
-      retryBtn.onclick = () => {
-        ToastManager.hide();
-        console.log(`[AUTH_ERROR] 재시도 실행: ${context}`);
-        retryCallback();
-      };
-    }
-    
-    if (contactBtn) {
-      contactBtn.onclick = () => {
-        ToastManager.hide();
-        this.showContactInfo();
-      };
-    }
-    
-    // 10초 후 자동 숨김
-    setTimeout(() => {
-      ToastManager.hide();
-    }, 10000);
+  // 요청 제한 에러 처리
+  showRateLimitError(message) {
+    errorToast.warning(message, {
+      title: '요청 제한',
+      duration: 10000
+    });
   },
   
-  // 고객센터 안내
+  // 일반 에러 처리
+  showGenericError(message, retryCallback) {
+    const options = {
+      title: '오류 발생'
+    };
+    
+    if (retryCallback) {
+      options.actions = [
+        {
+          text: '다시 시도',
+          action: retryCallback
+        }
+      ];
+    }
+    
+    errorToast.error(message, options);
+  },
+  
+  // 고객센터 안내 (ErrorToast 사용)
   showContactInfo() {
-    const contactMessage = `
-문제가 지속될 경우 아래 방법으로 문의해주세요:
+    const contactMessage = `문제가 지속될 경우 아래 방법으로 문의해주세요:
 
 📧 이메일: support@todoapp.com
-🕒 운영시간: 평일 09:00-18:00
+🕒 운영시간: 평일 09:00-18:00  
 🔗 FAQ: https://todoapp.com/faq
 
-문의 시 발생한 시간과 상황을 알려주시면 빠른 해결에 도움이 됩니다.
-    `;
+문의 시 발생한 시간과 상황을 알려주시면 빠른 해결에 도움이 됩니다.`;
     
-    ToastManager.show(contactMessage, 'info', 15000);
+    errorToast.info(contactMessage, {
+      title: '고객센터 안내',
+      duration: 15000
+    });
   }
 };
 
@@ -255,7 +686,7 @@ const AuthErrorHandler = {
 let isAuthChecked = false;
 let authCheckInProgress = false;
 
-// 세션 상태 관리 및 모니터링 시스템
+// 세션 상태 관리 및 모니터링 시스템 (리팩터링됨 - AuthUtils 사용)
 const SessionManager = {
   checkInterval: null,
   isMonitoring: false,
@@ -274,48 +705,58 @@ const SessionManager = {
       // 로딩 UI 표시
       this.showAuthLoadingState();
       
-      // Supabase 세션 확인 (타임아웃 설정으로 모바일 네트워크 지연 대응)
-      const sessionPromise = supabase.auth.getSession();
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Session check timeout')), 5000)
-      );
-      
-      const { data: { session }, error } = await Promise.race([sessionPromise, timeoutPromise]);
+      // AuthUtils를 사용하여 세션 확인
+      const { session, error } = await AuthUtils.checkSession();
       
       if (error) {
         console.error('[AUTH] 세션 확인 오류:', error);
+        
+        // 네트워크 오류 처리
+        if (AuthUtils.isNetworkError(error)) {
+          console.warn('[AUTH] 네트워크 문제로 인한 인증 체크 실패');
+          errorToast.networkError('네트워크 연결을 확인하고 새로고침해주세요.', {
+            title: '연결 오류',
+            actions: [
+              {
+                text: '새로고침',
+                action: () => window.location.reload()
+              }
+            ]
+          });
+        } else {
+          AuthErrorHandler.showError(error, 'INITIAL_SESSION_CHECK');
+        }
+        
         this.handleAuthCheckComplete(false);
         return;
       }
       
       // 세션 유효성 검사
-      if (session && session.user) {
-        const now = Math.floor(Date.now() / 1000);
-        
-        // 토큰 만료 확인
-        if (session.expires_at && session.expires_at <= now) {
-          console.warn('[AUTH] 만료된 세션 감지');
-          await supabase.auth.signOut();
-          this.handleAuthCheckComplete(false);
-          return;
-        }
-        
+      if (AuthUtils.validateSession(session)) {
         console.log('[AUTH] 유효한 세션 감지:', session.user.email);
         this.handleAuthCheckComplete(true, session.user.id);
       } else {
-        console.log('[AUTH] 세션 없음');
+        console.log('[AUTH] 세션 없음 또는 만료됨');
         this.handleAuthCheckComplete(false);
       }
       
     } catch (error) {
       console.error('[AUTH] 인증 체크 중 예외:', error);
       
-      // 네트워크 오류 처리
-      if (error.message === 'Session check timeout' || 
-          error.message.includes('fetch') || 
-          !navigator.onLine) {
+      // 네트워크 오류 처리 (ErrorToast 사용)
+      if (AuthUtils.isNetworkError(error)) {
         console.warn('[AUTH] 네트워크 문제로 인한 인증 체크 실패');
-        ToastManager.show('네트워크 연결을 확인하고 새로고침해주세요.', 'warning', 8000);
+        errorToast.networkError('네트워크 연결을 확인하고 새로고침해주세요.', {
+          title: '연결 오류',
+          actions: [
+            {
+              text: '새로고침',
+              action: () => window.location.reload()
+            }
+          ]
+        });
+      } else {
+        AuthErrorHandler.showError(error, 'AUTH_CHECK_EXCEPTION');
       }
       
       this.handleAuthCheckComplete(false);
@@ -404,35 +845,35 @@ const SessionManager = {
     if (this.isMonitoring) return;
     
     this.isMonitoring = true;
-    console.log('[SESSION] 세션 모니터링 시작');
+    console.log('[SESSION] 세션 모니터링 시작 (AuthUtils 사용)');
     
-    // 30초마다 세션 상태 확인
-    this.checkInterval = setInterval(async () => {
-      await this.validateSession();
-    }, 30000);
+    // AuthUtils를 사용하여 세션 모니터링
+    this.checkInterval = AuthUtils.startSessionMonitoring(
+      () => this.handleSessionExpired(), // 세션 만료 시 콜백
+      30000 // 30초 간격
+    );
   },
   
   // 세션 모니터링 중지
   stopMonitoring() {
     if (this.checkInterval) {
-      clearInterval(this.checkInterval);
+      AuthUtils.stopSessionMonitoring(this.checkInterval);
       this.checkInterval = null;
     }
     this.isMonitoring = false;
     console.log('[SESSION] 세션 모니터링 중지');
   },
   
-  // 세션 유효성 검사
+  // 세션 유효성 검사 (AuthUtils 사용)
   async validateSession() {
     try {
-      const { data: { session }, error } = await supabase.auth.getSession();
+      const { session, error } = await AuthUtils.checkSession();
       
       if (error) {
         console.error('[SESSION] 세션 확인 오류:', error);
         
         // 네트워크 오류인지 확인
-        if (error.message && (error.message.includes('fetch') || error.message.includes('network'))) {
-          // 네트워크 오류는 재시도 가능한 에러로 처리
+        if (AuthUtils.isNetworkError(error)) {
           console.warn('[SESSION] 네트워크 오류로 인한 세션 확인 실패, 재시도 대기');
           return true; // 네트워크 오류시 세션을 유지하고 다음 체크를 기다림
         } else {
@@ -442,22 +883,14 @@ const SessionManager = {
         }
       }
       
-      if (!session || !session.user) {
+      if (!AuthUtils.validateSession(session)) {
         console.warn('[SESSION] 세션이 만료되었습니다');
         this.handleSessionExpired('세션이 만료되었습니다. 다시 로그인해주세요.');
         return false;
       }
       
-      // 토큰 만료 시간 확인
-      const now = Math.floor(Date.now() / 1000);
-      if (session.expires_at && session.expires_at <= now) {
-        console.warn('[SESSION] 토큰이 만료되었습니다');
-        this.handleSessionExpired('인증 토큰이 만료되었습니다. 다시 로그인해주세요.');
-        return false;
-      }
-      
-      // 토큰 만료 30분 전 알림
-      if (session.expires_at && (session.expires_at - now) <= 1800) {
+      // 토큰 만료 임박 알림
+      if (AuthUtils.isTokenExpiringSoon(session)) {
         console.warn('[SESSION] 토큰이 곧 만료됩니다');
         ToastManager.show('세션이 곧 만료됩니다. 작업을 저장해주세요.', 'warning', 8000);
       }
@@ -468,7 +901,7 @@ const SessionManager = {
       console.error('[SESSION] 세션 검증 예외:', error);
       
       // 네트워크 관련 예외인지 확인
-      if (error.name === 'TypeError' || error.message.includes('fetch') || !navigator.onLine) {
+      if (AuthUtils.isNetworkError(error)) {
         console.warn('[SESSION] 네트워크 예외로 인한 세션 검증 실패, 재시도 대기');
         return true; // 네트워크 예외시 세션을 유지
       } else {
@@ -479,8 +912,8 @@ const SessionManager = {
     }
   },
   
-  // 세션 만료 처리
-  handleSessionExpired(message = '세션이 만료되었습니다. 다시 로그인해주세요.') {
+  // 세션 만료 처리 (ErrorToast 시스템 사용)
+  handleSessionExpired(message = '로그인이 만료되었습니다.\n다시 로그인해주세요.') {
     console.warn('[SESSION] 세션 만료 처리:', message);
     
     // 모니터링 중지
@@ -489,27 +922,38 @@ const SessionManager = {
     // 로컬 스토리지 정리
     clearLocalStorage();
     
-    // 토스트 메시지 표시
-    ToastManager.show(message, 'error', 0); // 사용자가 직접 닫을 때까지 표시
+    // ErrorToast로 세션 만료 알림 (모바일 최적화)
+    errorToast.warning(message, {
+      title: '로그인 필요',
+      persistent: true,
+      actions: [
+        {
+          text: '로그인하기',
+          action: () => {
+            showAuthSection();
+          }
+        }
+      ]
+    });
     
-    // Supabase 세션 정리 (오류 무시)
-    supabase.auth.signOut().catch(error => {
+    // AuthUtils를 사용하여 로그아웃 처리
+    AuthUtils.signOut().catch(error => {
       console.warn('[SESSION] 로그아웃 중 오류 (무시):', error);
     });
     
-    // 로그인 화면으로 이동
+    // 로그인 화면으로 이동 (약간의 지연으로 사용자가 메시지를 읽을 시간 제공)
     setTimeout(() => {
       showAuthSection();
-    }, 1000);
+    }, 2000);
   },
   
-  // 강제 세션 갱신 시도
+  // 강제 세션 갱신 시도 (AuthUtils 사용)
   async refreshSession() {
     try {
       console.log('[SESSION] 세션 갱신 시도');
-      const { data, error } = await supabase.auth.refreshSession();
+      const { success, session, error } = await AuthUtils.refreshSession();
       
-      if (error || !data.session) {
+      if (!success) {
         console.error('[SESSION] 세션 갱신 실패:', error);
         this.handleSessionExpired('세션 갱신에 실패했습니다. 다시 로그인해주세요.');
         return false;
@@ -528,6 +972,12 @@ const SessionManager = {
 };
 
 window.addEventListener("DOMContentLoaded", async () => {
+  // 다크 모드 시스템 초기화 (가장 먼저 실행)
+  ThemeManager.init();
+  
+  // 전역 에러 핸들링 설정
+  setupGlobalErrorHandling();
+  
   // 성능 최적화 초기화
   initializePerformanceOptimizations();
   
@@ -568,9 +1018,9 @@ window.addEventListener("DOMContentLoaded", async () => {
       let checkCount = 0;
       sessionCheckInterval = setInterval(async () => {
         checkCount++;
-        const { data: { session } } = await supabase.auth.getSession();
+        const { session } = await AuthUtils.checkSession();
         
-        if (session && session.user) {
+        if (AuthUtils.validateSession(session)) {
           console.log("[INFO] 포커스 이벤트로 로그인 감지됨!");
           clearInterval(sessionCheckInterval);
           showTodoApp(session.user.id);
@@ -662,26 +1112,47 @@ function showTodoApp(userId) {
 }
 
 // 공통 에러 처리 함수
+// 개선된 공통 에러 처리 함수
 function handleAuthError(error) {
   if (!error) return false;
+  
+  console.error("[AUTH_ERROR] 인증 에러 감지:", error);
   
   // JWT 토큰 관련 오류 처리
   if (error.code === "401" || error.code === "403" || 
       error.message?.includes("JWT") || 
       error.message?.includes("permission denied") ||
-      error.message?.includes("access_token")) {
-    console.error("[AUTH ERROR]", error);
-    alert("세션이 만료되었거나 권한이 없습니다. 다시 로그인 해주세요.");
-    // Supabase 세션 정리 및 로그인 화면으로 이동
-    supabase.auth.signOut();
-    showAuthSection();
+      error.message?.includes("access_token") ||
+      error.message?.includes("unauthorized")) {
+    
+    AuthErrorHandler.showError(error, 'AUTH_TOKEN_ERROR');
+    return true;
+  }
+  
+  // 세션 만료 처리
+  if (error.message?.includes("session") || error.message?.includes("expired")) {
+    AuthErrorHandler.showError(error, 'SESSION_EXPIRED');
     return true;
   }
   
   // 네트워크 오류
-  if (error.message?.includes("Failed to fetch") || error.message?.includes("NetworkError")) {
-    console.error("[NETWORK ERROR]", error);
-    alert("네트워크 연결을 확인해주세요.");
+  if (error.message?.includes("Failed to fetch") || 
+      error.message?.includes("NetworkError") ||
+      error.message?.includes("fetch")) {
+    
+    AuthErrorHandler.showError(error, 'NETWORK_ERROR');
+    return true;
+  }
+  
+  // 요청 제한 오류
+  if (error.code === "429" || error.message?.includes("Too many requests")) {
+    AuthErrorHandler.showError(error, 'RATE_LIMIT');
+    return true;
+  }
+  
+  // 기타 인증 관련 오류
+  if (error.code && parseInt(error.code) >= 400 && parseInt(error.code) < 500) {
+    AuthErrorHandler.showError(error, 'AUTH_GENERAL');
     return true;
   }
   
@@ -729,23 +1200,26 @@ if (addForm) {
     
     // 마감일 유효성 검사
     if (dueDateLocal && !isValidDate(dueDateLocal)) {
-      alert("올바른 날짜를 입력해주세요.");
+      errorToast.warning("올바른 날짜를 입력해주세요.", {
+        title: '입력 오류'
+      });
       return;
     }
     
     // 마감일을 UTC ISO 형식으로 변환
     const due_date = dueDateLocal ? convertToUTCISO(dueDateLocal) : null;
     
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (!session || !session.user) {
-      alert("로그인 후 이용하세요.");
+    // AuthUtils를 사용하여 인증 확인
+    const { user } = await AuthUtils.getCurrentUser();
+    if (!user) {
+      errorToast.error("로그인 후 이용하세요.", {
+        title: '인증 필요'
+      });
       return;
     }
     
     const { error } = await supabase.from("todos").insert({
-      user_id: session.user.id,
+      user_id: user.id,
       title,
       status: 'pending', // status 컬럼 사용
       due_date,
@@ -754,9 +1228,16 @@ if (addForm) {
     
     if (handleAuthError(error)) return;
     if (error) {
-      alert("추가 실패: " + error.message);
+      errorToast.error(`TODO 추가 실패: ${error.message}`, {
+        title: '추가 오류'
+      });
       return;
     }
+    
+    // 성공 메시지
+    errorToast.success("TODO가 성공적으로 추가되었습니다!", {
+      duration: 2000
+    });
     
     input.value = "";
     dueInput.value = "";
@@ -790,11 +1271,11 @@ export async function loadTodos(userId) {
     return;
   }
   
-  // 추가 세션 유효성 검사 (모바일 환경 안전성 강화)
+  // 추가 세션 유효성 검사 (모바일 환경 안전성 강화) - AuthUtils 사용
   try {
-    const { data: { session }, error } = await supabase.auth.getSession();
+    const { session, error } = await AuthUtils.checkSession();
     
-    if (error || !session || !session.user || session.user.id !== userId) {
+    if (error || !AuthUtils.validateSession(session) || session.user.id !== userId) {
       console.warn('[LOAD_TODOS] 세션 유효성 검사 실패, 로그인 화면으로 이동');
       SessionManager.handleSessionExpired('세션이 유효하지 않습니다. 다시 로그인해주세요.');
       return;
@@ -803,7 +1284,7 @@ export async function loadTodos(userId) {
     console.error('[LOAD_TODOS] 세션 검증 중 예외:', error);
     
     // 네트워크 오류가 아닌 경우에만 세션 만료 처리
-    if (!error.message.includes('fetch') && navigator.onLine) {
+    if (!AuthUtils.isNetworkError(error)) {
       SessionManager.handleSessionExpired('세션 검증 중 오류가 발생했습니다.');
       return;
     }
@@ -813,9 +1294,12 @@ export async function loadTodos(userId) {
   
   const todoList = document.getElementById("todo-list");
   
-  // 로딩 중이 아닌 경우에만 로딩 표시
-  if (!todoList.innerHTML.includes('로딩 중...')) {
-    showLoading();
+  // 스켈레톤 로딩 표시
+  let skeletonId = null;
+  if (!todoList.innerHTML.includes('로딩 중...') && !todoList.innerHTML.includes('skeleton')) {
+    skeletonId = skeletonLoader.showTodoList(todoList, 5, {
+      label: 'TODO 리스트 로딩 중...'
+    });
   }
   
   let query = supabase.from("todos").select("*").eq("user_id", userId);
@@ -854,10 +1338,19 @@ export async function loadTodos(userId) {
     .order("due_date", { ascending: true })
     .order("created_at", { ascending: false });
     
+  // 스켈레톤 숨기기 (성공/실패 관계없이)
+  if (skeletonId) {
+    skeletonLoader.hide(skeletonId);
+  }
+  
   todoList.innerHTML = "";
   
   if (handleAuthError(error)) return;
   if (error) {
+    // 에러 토스트 표시
+    errorToast.error(`TODO 리스트 로딩 실패: ${error.message}`, {
+      title: '데이터 로딩 오류'
+    });
     todoList.innerHTML = '<li class="todo-item error-item">불러오기 실패: ' + error.message + '</li>';
     return;
   }
@@ -901,13 +1394,44 @@ export async function loadTodos(userId) {
     checkbox.className = "todo-checkbox";
     checkbox.checked = isCompleted;
     checkbox.addEventListener("change", async () => {
-      const newStatus = checkbox.checked ? 'completed' : 'pending';
-      const { error } = await supabase
-        .from("todos")
-        .update({ status: newStatus })
-        .eq("id", todo.id);
-      if (handleAuthError(error)) return;
-      await loadTodos(userId);
+      try {
+        // 체크박스 로딩 상태
+        checkbox.disabled = true;
+        
+        const newStatus = checkbox.checked ? 'completed' : 'pending';
+        const { error } = await supabase
+          .from("todos")
+          .update({ status: newStatus })
+          .eq("id", todo.id);
+          
+        if (handleAuthError(error)) {
+          checkbox.disabled = false;
+          checkbox.checked = !checkbox.checked; // 원래 상태로 복원
+          return;
+        }
+        
+        if (error) {
+          errorToast.error(`할 일 상태 변경 실패: ${error.message}`, {
+            title: '업데이트 오류'
+          });
+          checkbox.disabled = false;
+          checkbox.checked = !checkbox.checked; // 원래 상태로 복원
+          return;
+        }
+        
+        const statusText = checkbox.checked ? '완료' : '미완료';
+        errorToast.success(`할 일이 ${statusText}로 변경되었습니다.`);
+        
+        checkbox.disabled = false;
+        await loadTodos(userId);
+      } catch (error) {
+        console.error('[TOGGLE] 할 일 상태 변경 중 오류:', error);
+        errorToast.error('할 일 상태 변경 중 오류가 발생했습니다.', {
+          title: '업데이트 오류'
+        });
+        checkbox.disabled = false;
+        checkbox.checked = !checkbox.checked; // 원래 상태로 복원
+      }
     });
     li.appendChild(checkbox);
     
@@ -962,18 +1486,49 @@ export async function loadTodos(userId) {
     delBtn.textContent = "삭제";
     delBtn.addEventListener("click", async () => {
       if (confirm("정말 삭제하시겠습니까?")) {
-        const { error } = await supabase.from("todos").delete().eq("id", todo.id);
-        if (handleAuthError(error)) return;
-        if (error) {
-          alert("삭제 실패: " + error.message);
-          return;
+        try {
+          // 삭제 버튼 로딩 상태
+          const originalText = delBtn.textContent;
+          delBtn.textContent = "삭제 중...";
+          delBtn.disabled = true;
+          
+          const { error } = await supabase.from("todos").delete().eq("id", todo.id);
+          
+          if (handleAuthError(error)) {
+            delBtn.textContent = originalText;
+            delBtn.disabled = false;
+            return;
+          }
+          
+          if (error) {
+            errorToast.error(`할 일 삭제 실패: ${error.message}`, {
+              title: '삭제 오류'
+            });
+            delBtn.textContent = originalText;
+            delBtn.disabled = false;
+            return;
+          }
+          
+          errorToast.success('할 일이 삭제되었습니다.');
+          await loadTodos(userId);
+        } catch (error) {
+          console.error('[DELETE] 할 일 삭제 중 오류:', error);
+          errorToast.error('할 일 삭제 중 오류가 발생했습니다.', {
+            title: '삭제 오류'
+          });
+          delBtn.textContent = originalText;
+          delBtn.disabled = false;
         }
-        await loadTodos(userId);
       }
     });
     li.appendChild(delBtn);
     
     todoList.appendChild(li);
+  }
+  
+  // 스켈레톤 숨기기
+  if (skeletonId) {
+    skeletonLoader.hide(skeletonId);
   }
 }
 
@@ -1042,26 +1597,45 @@ async function editTodoInline(titleEl, todo, userId) {
     const newTitle = input.value.trim();
     
     if (save && newTitle && newTitle !== originalText) {
-      // 제목 업데이트
-      const { error } = await supabase
-        .from("todos")
-        .update({ title: newTitle })
-        .eq("id", todo.id);
+      try {
+        // 입력 필드 로딩 상태
+        input.disabled = true;
+        input.style.backgroundColor = '#f5f5f5';
         
-      if (handleAuthError(error)) {
-        input.remove();
-        titleEl.style.display = "";
+        // 제목 업데이트
+        const { error } = await supabase
+          .from("todos")
+          .update({ title: newTitle })
+          .eq("id", todo.id);
+          
+        if (handleAuthError(error)) {
+          input.remove();
+          titleEl.style.display = "";
+          return;
+        }
+        
+        if (error) {
+          errorToast.error(`할 일 수정 실패: ${error.message}`, {
+            title: '수정 오류'
+          });
+          input.disabled = false;
+          input.style.backgroundColor = '#fff';
+          input.focus();
+          return;
+        }
+        
+        titleEl.textContent = newTitle;
+        errorToast.success('할 일이 수정되었습니다.');
+      } catch (error) {
+        console.error('[EDIT] 할 일 수정 중 오류:', error);
+        errorToast.error('할 일 수정 중 오류가 발생했습니다.', {
+          title: '수정 오류'
+        });
+        input.disabled = false;
+        input.style.backgroundColor = '#fff';
+        input.focus();
         return;
       }
-      
-      if (error) {
-        alert("수정 실패: " + error.message);
-        input.remove();
-        titleEl.style.display = "";
-        return;
-      }
-      
-      titleEl.textContent = newTitle;
     }
     
     // UI 복원
@@ -1099,7 +1673,7 @@ function setupLogoutButton() {
   logoutButton.addEventListener("click", handleLogout);
 }
 
-// 로그아웃 처리 함수
+// 로그아웃 처리 함수 (AuthUtils 사용)
 async function handleLogout() {
   try {
     console.log("[INFO] 로그아웃 시작");
@@ -1109,10 +1683,10 @@ async function handleLogout() {
       return;
     }
     
-    // Supabase 로그아웃 API 호출
-    const { error } = await supabase.auth.signOut();
+    // AuthUtils를 사용하여 로그아웃 처리
+    const { success, error } = await AuthUtils.signOut();
     
-    if (error) {
+    if (!success) {
       console.error("[ERROR] 로그아웃 실패:", error);
       alert("로그아웃 중 오류가 발생했습니다: " + error.message);
       return;
@@ -1249,14 +1823,15 @@ function setupMobileFAB(userId) {
     // 마감일을 UTC ISO 형식으로 변환
     const due_date = dueDateLocal ? convertToUTCISO(dueDateLocal) : null;
     
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session || !session.user) {
+    // AuthUtils를 사용하여 인증 확인
+    const { user } = await AuthUtils.getCurrentUser();
+    if (!user) {
       alert("로그인 후 이용하세요.");
       return;
     }
     
     const { error } = await supabase.from("todos").insert({
-      user_id: session.user.id,
+      user_id: user.id,
       title,
       status: 'pending',
       due_date,
@@ -1585,10 +2160,10 @@ async function handleGoogleAuth() {
       return new Promise((resolve) => {
         const checkInterval = setInterval(async () => {
           try {
-            // 먼저 세션 상태를 확인 (로그인 성공 즉시 감지)
-            const { data: { session } } = await supabase.auth.getSession();
+            // AuthUtils를 사용하여 세션 상태 확인 (로그인 성공 즉시 감지)
+            const { session } = await AuthUtils.checkSession();
             
-            if (session && session.user) {
+            if (AuthUtils.validateSession(session)) {
               console.log('[AUTH] 구글 로그인 성공! 사용자:', session.user.email);
               
               // 로그인 성공 시 즉시 팝업 닫기
@@ -1621,9 +2196,9 @@ async function handleGoogleAuth() {
               
               const checkSession = async () => {
                 attempts++;
-                const { data: { session } } = await supabase.auth.getSession();
+                const { session } = await AuthUtils.checkSession();
                 
-                if (session && session.user) {
+                if (AuthUtils.validateSession(session)) {
                   console.log('[AUTH] 지연된 로그인 감지! 사용자:', session.user.email);
                   showTodoApp(session.user.id);
                   resolve(true);

@@ -1,19 +1,11 @@
 // scripts/auth.js
 import { supabase } from "./api.js";
+import AuthUtils from "./authUtils.js";
 
-// JWT 토큰 관련 유틸리티 함수들
+// JWT 토큰 관련 유틸리티 함수들 (하위 호환성을 위한 래퍼)
 export async function getCurrentSession() {
-  try {
-    const { data: { session }, error } = await supabase.auth.getSession();
-    if (error) {
-      console.error("세션 조회 오류:", error);
-      return null;
-    }
-    return session;
-  } catch (e) {
-    console.error("세션 조회 실패:", e);
-    return null;
-  }
+  const { session } = await AuthUtils.checkSession();
+  return session;
 }
 
 export async function getCurrentAccessToken() {
@@ -31,70 +23,32 @@ export async function getCurrentAccessToken() {
   }
 }
 
-// API 요청을 위한 헤더 생성 함수
+// API 요청을 위한 헤더 생성 함수 (AuthUtils 사용)
 export async function getAuthHeaders() {
-  const token = await getCurrentAccessToken();
-  if (!token) {
-    throw new Error("인증 토큰이 없습니다. 다시 로그인해주세요.");
-  }
-  
-  return {
-    'Authorization': `Bearer ${token}`,
-    'apikey': supabase.supabaseKey,
-    'Content-Type': 'application/json'
-  };
+  return await AuthUtils.getAuthHeaders();
 }
 
-// 인증된 API 요청 래퍼 함수
+// 인증된 API 요청 래퍼 함수 (AuthUtils 사용)
 export async function makeAuthenticatedRequest(url, options = {}) {
-  try {
-    const headers = await getAuthHeaders();
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        ...headers,
-        ...options.headers
-      }
-    });
-    
-    if (!response.ok) {
-      if (response.status === 401 || response.status === 403) {
-        throw new Error("인증이 만료되었습니다. 다시 로그인해주세요.");
-      }
-      throw new Error(`API 요청 실패: ${response.status} ${response.statusText}`);
-    }
-    
-    return response;
-  } catch (e) {
-    console.error("인증된 API 요청 실패:", e);
-    throw e;
-  }
+  return await AuthUtils.makeAuthenticatedRequest(url, options);
 }
 
-// JWT 토큰 만료 처리 함수
+// JWT 토큰 만료 처리 함수 (AuthUtils 사용)
 export async function refreshTokenIfNeeded() {
   try {
-    const session = await getCurrentSession();
-    if (!session) {
-      throw new Error("세션이 없습니다");
-    }
+    const { session } = await AuthUtils.checkSession();
     
-    // 토큰 만료 시간 확인 (만료 5분 전에 미리 갱신)
-    const expiresAt = session.expires_at * 1000; // Unix timestamp to milliseconds
-    const now = Date.now();
-    const fiveMinutes = 5 * 60 * 1000;
-    
-    if (expiresAt - now < fiveMinutes) {
+    if (!session || AuthUtils.isTokenExpiringSoon(session, 300)) { // 5분 전에 갱신
       console.log("[INFO] JWT 토큰 갱신이 필요합니다");
       
-      const { data, error } = await supabase.auth.refreshSession();
-      if (error) {
-        console.error("토큰 갱신 실패:", error);
+      const result = await AuthUtils.refreshSession();
+      if (!result.success) {
+        console.error("토큰 갱신 실패:", result.error);
         throw new Error("토큰 갱신에 실패했습니다");
       }
       
       console.log("[INFO] JWT 토큰이 성공적으로 갱신되었습니다");
-      return data.session;
+      return result.session;
     }
     
     return session;
@@ -104,30 +58,27 @@ export async function refreshTokenIfNeeded() {
   }
 }
 
-// 토큰 유효성 검사 함수
+// 토큰 유효성 검사 함수 (AuthUtils 사용)
 export async function validateToken() {
   try {
-    const session = await getCurrentSession();
+    const { session } = await AuthUtils.checkSession();
     if (!session || !session.access_token) {
       return { valid: false, reason: "토큰이 없습니다" };
     }
     
-    // 토큰 만료 시간 체크
-    const expiresAt = session.expires_at * 1000;
-    const now = Date.now();
-    
-    if (now >= expiresAt) {
+    const valid = AuthUtils.validateSession(session);
+    if (!valid) {
       return { valid: false, reason: "토큰이 만료되었습니다" };
     }
     
     // 토큰이 곧 만료될 예정인지 체크
-    const oneHour = 60 * 60 * 1000;
-    const willExpireSoon = (expiresAt - now) < oneHour;
+    const willExpireSoon = AuthUtils.isTokenExpiringSoon(session);
+    const expiresIn = session.expires_at ? (session.expires_at - Math.floor(Date.now() / 1000)) : 0;
     
     return { 
       valid: true, 
       willExpireSoon,
-      expiresIn: Math.floor((expiresAt - now) / 1000)
+      expiresIn
     };
   } catch (e) {
     console.error("토큰 검증 실패:", e);
@@ -135,7 +86,7 @@ export async function validateToken() {
   }
 }
 
-// 전역 토큰 만료 처리 핸들러
+// 전역 토큰 만료 처리 핸들러 (AuthUtils 사용)
 export async function handleTokenExpiration() {
   try {
     console.log("[WARNING] 토큰 만료 감지, 자동 로그아웃 처리");
@@ -143,16 +94,9 @@ export async function handleTokenExpiration() {
     // 사용자에게 알림
     alert("로그인 세션이 만료되었습니다. 다시 로그인해주세요.");
     
-    // Supabase 세션 정리
-    await supabase.auth.signOut();
-    
-    // 로그인 화면으로 이동
-    if (window.showAuthSection) {
-      window.showAuthSection();
-    } else {
-      // main.js가 로드되지 않은 경우 페이지 새로고침
-      window.location.reload();
-    }
+    // AuthUtils를 사용하여 로그아웃 및 리다이렉트
+    await AuthUtils.signOut();
+    AuthUtils.redirectToLogin();
   } catch (e) {
     console.error("토큰 만료 처리 실패:", e);
     // 최후 수단으로 페이지 새로고침
@@ -160,20 +104,26 @@ export async function handleTokenExpiration() {
   }
 }
 
-// 이메일 중복 체크 함수
+// 이메일 중복 체크 함수 (회원가입용)
 export async function checkEmailExists(email) {
   try {
-    // Supabase Auth에서는 직접 이메일 중복 체크를 지원하지 않으므로
-    // 임시 회원가입을 시도해서 에러 메시지로 판단
-    const { error } = await supabase.auth.signUp({
-      email,
-      password: "temporary_password_for_check_only",
+    // 비밀번호 재설정을 통한 사용자 존재 확인 (더 안전)
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: 'http://localhost:8000/password-reset-check-only'
     });
     
-    if (error && error.message.includes("already registered")) {
-      return true; // 이메일이 이미 존재함
+    if (error) {
+      // 사용자가 존재하지 않으면 에러 발생
+      if (error.message.includes('User not found') || 
+          error.message.includes('user not found') ||
+          error.message.includes('Invalid email')) {
+        return false; // 이메일이 사용 가능
+      }
+      // 기타 에러는 존재한다고 가정
+      return true;
     }
-    return false; // 이메일이 사용 가능
+    
+    return true; // 에러가 없으면 사용자 존재
   } catch (e) {
     console.error("이메일 중복 체크 오류:", e);
     return false; // 오류 시 사용 가능으로 처리
@@ -192,6 +142,27 @@ export function validatePassword(password) {
   return passwordRegex.test(password);
 }
 
+// 사용자 존재 여부 확인 함수 (보안상 안전한 방법)
+export async function checkUserExists(email) {
+  try {
+    // 실제로는 회원가입 시도를 통해 확인하지만,
+    // 더 안전한 방법은 비밀번호 재설정 요청으로 확인하는 것
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: 'http://localhost:8000/password-reset' // 실제로는 작동하지 않는 URL
+    });
+    
+    // 사용자가 존재하지 않으면 특정 에러가 발생
+    if (error && error.message.includes('User not found')) {
+      return false; // 사용자 존재하지 않음
+    }
+    
+    return true; // 사용자 존재할 가능성 높음 (또는 확실하지 않음)
+  } catch (e) {
+    console.warn("[WARN] 사용자 존재 확인 실패:", e);
+    return true; // 불확실한 경우 존재한다고 가정
+  }
+}
+
 export async function signUpHandler(email, password) {
   try {
     // 입력값 최종 검증
@@ -208,27 +179,48 @@ export async function signUpHandler(email, password) {
       throw new Error('Failed to fetch');
     }
     
+    console.log("[DEBUG] 회원가입 시도:", { email: email, passwordLength: password.length });
+    
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
     });
-    console.log("[DEBUG] signUp result", data, error);
+    
+    console.log("[DEBUG] signUp 응답 상세:", {
+      hasData: !!data,
+      hasUser: !!(data && data.user),
+      hasSession: !!(data && data.session),
+      hasError: !!error,
+      errorMessage: error ? error.message : null,
+      errorStatus: error ? error.status : null,
+      userEmail: data && data.user ? data.user.email : null,
+      fullError: error
+    });
     
     if (error) {
+      console.error("[DEBUG] 회원가입 에러 상세:", error);
+      
       // 구체적인 에러 처리
-      if (error.message.includes("already registered") || error.message.includes("already been registered")) {
+      if (error.message.includes("already registered") || 
+          error.message.includes("already been registered") ||
+          error.message.includes("User already registered")) {
         throw new Error("User already registered");
       } else if (error.message.includes("Signup disabled")) {
         throw new Error("Signup disabled");
       } else if (error.message.includes("rate limit")) {
         throw new Error("Too many requests");
       } else {
+        console.error("[DEBUG] 예상치 못한 회원가입 에러:", error);
         throw error;
       }
     } else {
       // 회원가입 성공 시 자동 로그인 처리
       if (data.user && data.session) {
-        console.log("[SUCCESS] 회원가입 및 자동 로그인 성공");
+        console.log("[SUCCESS] 회원가입 및 자동 로그인 성공:", {
+          userId: data.user.id,
+          email: data.user.email,
+          hasSession: !!data.session
+        });
         ToastManager.show("회원가입 성공! 자동으로 로그인됩니다.", "success", 3000);
         
         // 즉시 로그인 성공 이벤트 발생 (2초 이내 이동)
@@ -238,10 +230,14 @@ export async function signUpHandler(email, password) {
           );
         }, 100); // 100ms 후 이동
         return true;
-      } else {
+      } else if (data.user && !data.session) {
         // 이메일 인증이 필요한 경우
+        console.log("[INFO] 회원가입 성공, 이메일 인증 필요:", data.user.email);
         ToastManager.show("이메일 인증 후 로그인하세요.", "info", 5000);
         return false;
+      } else {
+        console.error("[DEBUG] 회원가입 응답에 필수 데이터 누락:", data);
+        throw new Error("회원가입 응답이 올바르지 않습니다.");
       }
     }
   } catch (error) {
@@ -288,15 +284,41 @@ export async function signInHandler(email, password) {
       throw new Error('Failed to fetch');
     }
 
+    console.log("[DEBUG] 로그인 시도:", { email: email, passwordLength: password.length });
+
+    // 로그인 시도 전 기존 세션 정리
+    const { error: signOutError } = await supabase.auth.signOut();
+    if (signOutError) {
+      console.warn("[WARN] 기존 세션 정리 실패:", signOutError);
+    }
+
+    // 사용자 존재 여부 미리 확인 (선택적)
+    console.log("[DEBUG] 사용자 인증 진행 중...");
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
-    console.log("[DEBUG] signIn result", data, error);
+    
+    console.log("[DEBUG] signIn 응답 상세:", {
+      hasData: !!data,
+      hasUser: !!(data && data.user),
+      hasSession: !!(data && data.session),
+      hasError: !!error,
+      errorMessage: error ? error.message : null,
+      errorStatus: error ? error.status : null,
+      errorCode: error ? error.code : null,
+      userEmail: data && data.user ? data.user.email : null,
+      fullError: error
+    });
     
     if (error) {
+      console.error("[DEBUG] 로그인 에러 상세:", error);
+      
       // 구체적인 에러 메시지 처리
-      if (error.message.includes("Invalid login credentials")) {
+      if (error.message.includes("Invalid login credentials") || 
+          error.message.includes("invalid credentials") ||
+          error.message.includes("invalid_credentials")) {
         throw new Error("Invalid login credentials");
       } else if (error.message.includes("Email not confirmed")) {
         throw new Error("Email not confirmed");
@@ -305,10 +327,29 @@ export async function signInHandler(email, password) {
       } else if (error.message.includes("rate limit")) {
         throw new Error("Too many requests");
       } else {
+        console.error("[DEBUG] 예상치 못한 로그인 에러:", error);
         throw error;
       }
+    } else if (!data || !data.user || !data.session) {
+      // 데이터가 있지만 user나 session이 없는 경우
+      console.error("[DEBUG] 로그인 응답에 필수 데이터 누락:", data);
+      throw new Error("로그인 응답이 올바르지 않습니다.");
     } else {
-      console.log("[SUCCESS] 로그인 성공");
+      // 추가 사용자 검증: 이메일이 일치하는지 확인
+      if (data.user.email !== email) {
+        console.error("[SECURITY] 로그인 요청 이메일과 응답 이메일이 다름:", {
+          requested: email,
+          returned: data.user.email
+        });
+        await supabase.auth.signOut(); // 세션 정리
+        throw new Error("인증 오류가 발생했습니다.");
+      }
+
+      console.log("[SUCCESS] 로그인 성공:", {
+        userId: data.user.id,
+        email: data.user.email,
+        hasSession: !!data.session
+      });
       ToastManager.show("로그인 성공!", "success", 2000);
       
       // 로그인 성공 시 커스텀 이벤트 발생 (2초 이내 이동)
