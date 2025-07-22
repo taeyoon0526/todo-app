@@ -42,6 +42,13 @@ class AuthGuard {
       return;
     }
     
+    // 초기 상태 강제 설정 (안전장치)
+    console.log('[AUTH_GUARD] 초기 상태 설정 - 로그인 화면 표시');
+    this.authSection.style.display = 'block';
+    this.todoApp.style.display = 'none';
+    this.todoApp.classList.remove('todo-app-visible');
+    this.todoApp.classList.add('todo-app-hidden');
+    
     // 인증 상태 변경 이벤트 리스너 등록
     this.setupEventListeners();
     
@@ -179,7 +186,7 @@ class AuthGuard {
     if (AuthUtils.isNetworkError(error)) {
       this.showNetworkError();
     } else {
-      // 일반적인 인증 실패로 처리
+      // 일반적인 인증 실패로 처리 - 명시적으로 로그인 화면 표시
       await this.handleAuthFailure();
     }
   }
@@ -305,17 +312,22 @@ class AuthGuard {
   }
   
   /**
-   * 모든 섹션 숨기기
+   * 모든 섹션 강제 숨기기
    */
   hideAllSections() {
+    console.log('[AUTH_GUARD] 모든 섹션 숨기기');
+    
     if (this.authSection) {
       this.authSection.style.display = 'none';
     }
     
     if (this.todoApp) {
+      this.todoApp.style.display = 'none'; // 강제로 숨김
       this.todoApp.classList.remove('todo-app-visible');
       this.todoApp.classList.add('todo-app-hidden');
     }
+    
+    console.log('[AUTH_GUARD] 모든 섹션 숨김 처리 완료');
   }
   
   /**
@@ -335,15 +347,18 @@ class AuthGuard {
     
     this.hideLoadingState();
     
-    // 인증 섹션 숨기기
+    // 인증 섹션 강제 숨기기
     if (this.authSection) {
       this.authSection.style.display = 'none';
+      console.log('[AUTH_GUARD] 인증 섹션 강제 숨김 처리 완료');
     }
     
-    // TODO 앱 표시
+    // TODO 앱 강제 표시
     if (this.todoApp) {
+      this.todoApp.style.display = 'block'; // 강제로 표시
       this.todoApp.classList.remove('todo-app-hidden');
       this.todoApp.classList.add('todo-app-visible');
+      console.log('[AUTH_GUARD] TODO 앱 강제 표시 처리 완료');
       
       // TODO 앱 초기화 (전역 함수 호출, 안전한 접근)
       if (typeof window.showTodoApp === 'function') {
@@ -352,6 +367,14 @@ class AuthGuard {
         console.warn('[AUTH_GUARD] showTodoApp 함수를 찾을 수 없습니다');
       }
     }
+    
+    // 상태 로깅
+    console.log('[AUTH_GUARD] 렌더링 완료 - 인증 성공 상태:', {
+      authSectionDisplay: this.authSection?.style.display,
+      todoAppDisplay: this.todoApp?.style.display,
+      todoAppClasses: this.todoApp?.className,
+      userId: this.currentUserId
+    });
   }
   
   /**
@@ -362,15 +385,18 @@ class AuthGuard {
     
     this.hideLoadingState();
     
-    // TODO 앱 숨기기
+    // TODO 앱 강제 숨기기 (여러 방법으로 확실히 숨김)
     if (this.todoApp) {
+      this.todoApp.style.display = 'none'; // 강제로 숨김
       this.todoApp.classList.remove('todo-app-visible');
       this.todoApp.classList.add('todo-app-hidden');
+      console.log('[AUTH_GUARD] TODO 앱 강제 숨김 처리 완료');
     }
     
-    // 인증 섹션 표시
+    // 인증 섹션 강제 표시
     if (this.authSection) {
-      this.authSection.style.display = 'block';
+      this.authSection.style.display = 'block'; // 강제로 표시
+      console.log('[AUTH_GUARD] 인증 섹션 강제 표시 처리 완료');
       
       // 인증 섹션 초기화 (전역 함수 호출, 안전한 접근)
       if (typeof window.showAuthSection === 'function') {
@@ -379,6 +405,13 @@ class AuthGuard {
         console.warn('[AUTH_GUARD] showAuthSection 함수를 찾을 수 없습니다');
       }
     }
+    
+    // 상태 로깅
+    console.log('[AUTH_GUARD] 렌더링 완료 - 인증 실패 상태:', {
+      authSectionDisplay: this.authSection?.style.display,
+      todoAppDisplay: this.todoApp?.style.display,
+      todoAppClasses: this.todoApp?.className
+    });
   }
   
   /**

@@ -9,6 +9,9 @@
  * See LICENSE file for full terms and conditions.
  */
 
+import { supabase } from './api.js';
+import AuthUtils from './authUtils.js';
+
 class ErrorTracker {
   constructor() {
     this.errors = [];
@@ -369,50 +372,85 @@ class UserFeedback {
       return;
     }
 
-    const feedbackData = {
-      type,
-      message: message.trim(),
-      timestamp: new Date().toISOString(),
-      url: window.location.href,
-      userAgent: navigator.userAgent,
-      screenResolution: `${screen.width}x${screen.height}`,
-      language: navigator.language,
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
-    };
+    // 로딩 상태 표시
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = '전송 중...';
 
-    if (includeDebugInfo && window.ErrorTracker) {
-      feedbackData.debugInfo = {
-        recentErrors: window.ErrorTracker.getErrors().slice(-5),
-        errorSummary: window.ErrorTracker.getErrorSummary(),
-        localStorage: this.getLocalStorageInfo(),
-        performance: this.getPerformanceInfo()
+    try {
+      // 현재 사용자 정보 가져오기 (선택적)
+      const { user } = await AuthUtils.getCurrentUser();
+      
+      const feedbackData = {
+        type,
+        message: message.trim(),
+        user_id: user?.id || null, // 로그인한 사용자가 있으면 user_id 포함
+        user_email: user?.email || null,
+        url: window.location.href,
+        user_agent: navigator.userAgent,
+        screen_resolution: `${screen.width}x${screen.height}`,
+        language: navigator.language,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        created_at: new Date().toISOString()
       };
+
+      if (includeDebugInfo && window.ErrorTracker) {
+        feedbackData.debug_info = {
+          recentErrors: window.ErrorTracker.getErrors().slice(-5),
+          errorSummary: window.ErrorTracker.getErrorSummary(),
+          localStorage: this.getLocalStorageInfo(),
+          performance: this.getPerformanceInfo()
+        };
+      }
+
+      // Supabase에 피드백 저장
+      const { data, error } = await supabase
+        .from('feedback')
+        .insert([feedbackData])
+        .select();
+
+      if (error) {
+        console.error('Supabase 피드백 저장 실패:', error);
+        // 로컬 저장소 폴백
+        this.storeFeedbackLocally(feedbackData);
+        throw new Error('피드백 전송에 실패했습니다. 로컬에 저장되었습니다.');
+      }
+
+      console.log('피드백이 성공적으로 전송되었습니다:', data);
+
+      // 로컬 저장도 함께 수행 (백업용)
+      this.storeFeedbackLocally(feedbackData);
+
+      // Track in analytics
+      if (window.TodoAnalytics) {
+        window.TodoAnalytics.trackCustomEvent('feedback_submitted', {
+          type: feedbackData.type,
+          hasDebugInfo: includeDebugInfo,
+          isAuthenticated: !!user
+        });
+      }
+
+      // Show success message
+      this.showFeedbackSuccess(modal);
+
+    } catch (error) {
+      console.error('피드백 제출 중 오류:', error);
+      alert(error.message || '피드백 전송 중 오류가 발생했습니다.');
+    } finally {
+      // 버튼 상태 복원
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
     }
-
-    // Store feedback locally
-    this.storeFeedback(feedbackData);
-
-    // In a real application, you would send this to your server
-    console.log('Feedback submitted:', feedbackData);
-
-    // Track in analytics
-    if (window.TodoAnalytics) {
-      window.TodoAnalytics.trackCustomEvent('feedback_submitted', {
-        type: feedbackData.type,
-        hasDebugInfo: includeDebugInfo
-      });
-    }
-
-    // Show success message
-    this.showFeedbackSuccess(modal);
   }
 
-  storeFeedback(feedbackData) {
+  // 로컬 저장 함수명 변경
+  storeFeedbackLocally(feedbackData) {
     try {
       this.feedback.push(feedbackData);
       localStorage.setItem('todo-feedback', JSON.stringify(this.feedback.slice(-20))); // Keep last 20
     } catch (e) {
-      console.warn('Failed to store feedback:', e);
+      console.warn('Failed to store feedback locally:', e);
     }
   }
 
