@@ -40,6 +40,10 @@
             title="다크 모드 토글" aria-label="테마 변경" role="button">
             <i class="material-icons theme-icon">brightness_6</i>
           </button>
+          <button id="feedback-trigger" class="mdl-button mdl-js-button mdl-js-ripple-effect" title="피드백 보내기"
+            data-feedback-trigger="true">
+            <i class="material-icons">feedback</i>
+          </button>
           <button id="logout-button" class="mdl-button mdl-js-button mdl-js-ripple-effect logout-btn" title="로그아웃">
             <i class="material-icons">logout</i>
             <span class="logout-text">로그아웃</span>
@@ -488,6 +492,9 @@
   <!-- 애널리틱스 및 피드백 시스템 -->
   <script src="scripts/analytics.js"></script>
   <script type="module" src="scripts/feedback.js"></script>
+
+  <!-- 방문자 추적 테스트 도구 (개발용) -->
+  <script src="scripts/visitor-tracker-test.js"></script>
 
   <!-- QA 테스트 도구 (개발/테스트 환경에서만) -->
   <script src="scripts/mobile-qa-test.js"></script>

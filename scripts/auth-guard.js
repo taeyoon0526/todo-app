@@ -54,7 +54,7 @@ class AuthGuard {
     
     // 초기 인증 상태 확인 (약간의 지연을 두어 DOM이 완전히 로드되도록)
     setTimeout(() => {
-      this.checkAuthentication();
+      this.checkAuthState();
     }, 100);
   }
   
@@ -86,16 +86,22 @@ class AuthGuard {
   }
   
   /**
-   * 인증 상태 확인 (메인 로직) - AuthUtils 사용
+   * 인증 상태 체크 (AuthUtils 사용)
    */
-  async checkAuthentication() {
+  async checkAuthState() {
     if (this.authCheckInProgress) {
-      console.log('[AUTH_GUARD] 이미 인증 체크가 진행 중입니다');
+      console.log('[AUTH_GUARD] 인증 체크가 이미 진행 중입니다');
       return;
     }
     
     this.authCheckInProgress = true;
-    console.log('[AUTH_GUARD] 인증 상태 확인 시작');
+    console.log('[AUTH_GUARD] 인증 상태 체크 시작');
+    
+    // 타임아웃 설정 (5초)
+    const authTimeout = setTimeout(() => {
+      console.warn('[AUTH_GUARD] 인증 체크 타임아웃 - 로그인 화면으로 이동');
+      this.handleAuthTimeout();
+    }, 5000);
     
     try {
       // 1. 로딩 상태 표시
@@ -103,6 +109,9 @@ class AuthGuard {
       
       // 2. AuthUtils를 사용하여 세션 확인
       const { session, error } = await AuthUtils.checkSession();
+      
+      // 타임아웃 클리어
+      clearTimeout(authTimeout);
       
       if (error) {
         throw error;
@@ -119,12 +128,23 @@ class AuthGuard {
       }
       
     } catch (error) {
+      clearTimeout(authTimeout);
       console.error('[AUTH_GUARD] 인증 체크 중 오류:', error);
       await this.handleAuthError(error);
     } finally {
       this.authCheckInProgress = false;
       this.isAuthChecked = true;
     }
+  }
+  
+  /**
+   * 인증 타임아웃 처리
+   */
+  handleAuthTimeout() {
+    console.warn('[AUTH_GUARD] 인증 체크 타임아웃');
+    this.authCheckInProgress = false;
+    this.isAuthChecked = true;
+    this.handleAuthFailure();
   }
   
   /**

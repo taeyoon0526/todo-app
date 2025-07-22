@@ -25,6 +25,7 @@ import { debounce, initializePerformanceOptimizations } from "./performance.js";
 import { initializeAuthGuard } from "./auth-guard.js";
 import { skeletonLoader } from "../components/LoadingSkeleton.js";
 import { errorToast } from "../components/ErrorToast.js";
+import { visitorTracker } from "./visitor-tracker.js";
 
 // 다크 모드 관리 시스템
 const ThemeManager = {
@@ -2263,6 +2264,12 @@ document.addEventListener('DOMContentLoaded', () => {
   
   if (googleSignupBtn) {
     googleSignupBtn.addEventListener('click', handleGoogleAuth);
+  }
+  
+  // 방문자 추적기 전역 등록 (백업)
+  if (visitorTracker && !window.visitorTracker) {
+    window.visitorTracker = visitorTracker;
+    console.log('[MAIN] visitorTracker 전역 등록 완료 (백업)');
   }
   
   console.log('[AUTH] 구글 OAuth 버튼 이벤트 리스너 등록 완료');
