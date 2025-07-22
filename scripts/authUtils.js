@@ -10,21 +10,31 @@ export class AuthUtils {
   
   /**
    * 현재 세션 확인 (타임아웃 적용)
-   * @param {number} timeout - 타임아웃 시간 (기본 5000ms)
+   * @param {number} timeout - 타임아웃 시간 (기본 2000ms로 단축)
    * @returns {Promise<{session: Object|null, error: Object|null}>}
    */
-  static async checkSession(timeout = 5000) {
+  static async checkSession(timeout = 2000) {
     try {
+      console.log('[AUTH_UTILS] 세션 확인 시작, 타임아웃:', timeout + 'ms');
+      
       const sessionPromise = supabase.auth.getSession();
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Session check timeout')), timeout)
       );
 
-      const { data: { session }, error } = await Promise.race([sessionPromise, timeoutPromise]);
+      const result = await Promise.race([sessionPromise, timeoutPromise]);
+      const { data: { session }, error } = result;
       
+      console.log('[AUTH_UTILS] 세션 확인 완료:', { hasSession: !!session, hasError: !!error });
       return { session, error };
     } catch (error) {
-      console.error('[AUTH_UTILS] 세션 확인 실패:', error);
+      console.error('[AUTH_UTILS] 세션 확인 실패:', error.message);
+      
+      // 타임아웃 에러인 경우 명시적으로 표시
+      if (error.message === 'Session check timeout') {
+        console.warn('[AUTH_UTILS] 세션 확인 타임아웃 발생');
+      }
+      
       return { session: null, error };
     }
   }

@@ -97,18 +97,35 @@ class AuthGuard {
     this.authCheckInProgress = true;
     console.log('[AUTH_GUARD] 인증 상태 체크 시작');
     
-    // 타임아웃 설정 (5초)
+    // 강력한 타임아웃 설정 (3초로 단축)
     const authTimeout = setTimeout(() => {
-      console.warn('[AUTH_GUARD] 인증 체크 타임아웃 - 로그인 화면으로 이동');
+      console.warn('[AUTH_GUARD] 인증 체크 타임아웃 (3초) - 강제로 로그인 화면으로 이동');
       this.handleAuthTimeout();
-    }, 5000);
+    }, 3000);
     
     try {
       // 1. 로딩 상태 표시
       this.showLoadingState();
       
-      // 2. AuthUtils를 사용하여 세션 확인
-      const { session, error } = await AuthUtils.checkSession();
+      // 2. 빠른 체크: localStorage에서 토큰 확인
+      const hasToken = localStorage.getItem('supabase.auth.token') || sessionStorage.getItem('supabase.auth.token');
+      
+      if (!hasToken) {
+        console.log('[AUTH_GUARD] 로컬 토큰이 없음 - 바로 로그인 화면으로');
+        clearTimeout(authTimeout);
+        await this.handleAuthFailure();
+        return;
+      }
+      
+      // 3. AuthUtils를 사용하여 세션 확인 (프로미스 래핑으로 타임아웃 보장)
+      const sessionCheckPromise = Promise.race([
+        AuthUtils.checkSession(),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Session check timeout')), 2000)
+        )
+      ]);
+      
+      const { session, error } = await sessionCheckPromise;
       
       // 타임아웃 클리어
       clearTimeout(authTimeout);
@@ -117,10 +134,10 @@ class AuthGuard {
         throw error;
       }
       
-      // 3. 세션 유효성 검사
+      // 4. 세션 유효성 검사
       const isValid = AuthUtils.validateSession(session);
       
-      // 4. 인증 결과 처리
+      // 5. 인증 결과 처리
       if (isValid && session.user) {
         await this.handleAuthSuccess(session.user);
       } else {
@@ -130,7 +147,14 @@ class AuthGuard {
     } catch (error) {
       clearTimeout(authTimeout);
       console.error('[AUTH_GUARD] 인증 체크 중 오류:', error);
-      await this.handleAuthError(error);
+      
+      // 타임아웃 에러의 경우 바로 로그인 화면으로
+      if (error.message === 'Session check timeout') {
+        console.warn('[AUTH_GUARD] 세션 체크 타임아웃 - 로그인 화면으로 이동');
+        await this.handleAuthFailure();
+      } else {
+        await this.handleAuthError(error);
+      }
     } finally {
       this.authCheckInProgress = false;
       this.isAuthChecked = true;
@@ -141,10 +165,26 @@ class AuthGuard {
    * 인증 타임아웃 처리
    */
   handleAuthTimeout() {
-    console.warn('[AUTH_GUARD] 인증 체크 타임아웃');
+    console.warn('[AUTH_GUARD] 인증 체크 타임아웃 - 강제 복구');
+    
+    // 상태 초기화
     this.authCheckInProgress = false;
     this.isAuthChecked = true;
+    
+    // 즉시 로딩 상태 해제
+    this.hideLoadingState();
+    
+    // 강제로 로그인 화면 표시
     this.handleAuthFailure();
+    
+    // 사용자에게 알림
+    if (typeof window.ToastManager !== 'undefined' && window.ToastManager.show) {
+      window.ToastManager.show(
+        '인증 확인이 지연되어 로그인 화면으로 이동했습니다.', 
+        'warning', 
+        5000
+      );
+    }
   }
   
   /**
@@ -236,20 +276,36 @@ class AuthGuard {
    * Supabase 인증 상태 변경 이벤트 처리
    */
   handleSupabaseAuthChange(event, session) {
-    // 이미 체크가 완료된 상태에서만 처리
-    if (!this.isAuthChecked) {
+    console.log('[AUTH_GUARD] Supabase 인증 이벤트:', event, 'authChecked:', this.isAuthChecked, 'inProgress:', this.authCheckInProgress);
+    
+    // 무한 루프 방지: 진행 중이거나 이미 처리된 경우 무시
+    if (this.authCheckInProgress) {
+      console.log('[AUTH_GUARD] 인증 체크 진행 중이므로 이벤트 무시');
+      return;
+    }
+    
+    // INITIAL_SESSION과 SIGNED_OUT을 제외하고는 이미 체크 완료된 상태에서만 처리
+    if (!this.isAuthChecked && event !== 'INITIAL_SESSION' && event !== 'SIGNED_OUT') {
+      console.log('[AUTH_GUARD] 초기 인증 체크 미완료, 이벤트 무시');
       return;
     }
     
     switch (event) {
+      case 'INITIAL_SESSION':
+        // 초기 세션은 checkAuthState에서 처리하므로 무시
+        console.log('[AUTH_GUARD] INITIAL_SESSION 이벤트 - checkAuthState에서 처리');
+        break;
+        
       case 'SIGNED_IN':
-        if (session && session.user) {
+        if (session && session.user && this.isAuthChecked) {
           this.handleAuthSuccess(session.user);
         }
         break;
         
       case 'SIGNED_OUT':
-        this.handleAuthFailure();
+        if (this.isAuthChecked) {
+          this.handleAuthFailure();
+        }
         break;
         
       case 'TOKEN_REFRESHED':
