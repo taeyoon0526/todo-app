@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>방문자 통계 대시보드</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .dashboard-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    }
+
+    .dashboard-header {
+      text-align: center;
+      margin-bottom: 40px;
+      color: #333;
+    }
+
+    .dashboard-header h1 {
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+      background: linear-gradient(45deg, #667eea, #764ba2);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+
+    .stat-card {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      padding: 20px;
+      border-radius: 15px;
+      text-align: center;
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    .stat-card h3 {
+      font-size: 1.2rem;
+      margin-bottom: 10px;
+      opacity: 0.9;
+    }
+
+    .stat-card .stat-number {
+      font-size: 2.5rem;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    .stat-card .stat-label {
+      font-size: 0.9rem;
+      opacity: 0.8;
+    }
+
+    .data-section {
+      margin-bottom: 30px;
+    }
+
+    .data-section h2 {
+      color: #333;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #667eea;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .data-table th {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      padding: 15px;
+      text-align: left;
+      font-weight: 600;
+    }
+
+    .data-table td {
+      padding: 12px 15px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .data-table tr:hover {
+      background-color: #f8f9ff;
+    }
+
+    .refresh-btn {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      border: none;
+      padding: 12px 25px;
+      border-radius: 25px;
+      cursor: pointer;
+      font-size: 1rem;
+      margin-bottom: 20px;
+      transition: transform 0.2s;
+    }
+
+    .refresh-btn:hover {
+      transform: translateY(-2px);
+    }
+
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #667eea;
+    }
+
+    .error {
+      color: #e74c3c;
+      background: #ffeaea;
+      padding: 15px;
+      border-radius: 10px;
+      margin: 10px 0;
+    }
+
+    @media (max-width: 768px) {
+      .dashboard-container {
+        padding: 20px;
+      }
+
+      .dashboard-header h1 {
+        font-size: 2rem;
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .data-table {
+        font-size: 0.9rem;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="dashboard-container">
+    <div class="dashboard-header">
+      <h1>🌐 방문자 통계 대시보드</h1>
+      <p>실시간 웹사이트 방문자 분석</p>
+    </div>
+
+    <button class="refresh-btn" onclick="loadDashboard()">🔄 새로고침</button>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <h3>실시간 방문자</h3>
+        <div class="stat-number" id="liveVisitors">-</div>
+        <div class="stat-label">현재 온라인</div>
+      </div>
+
+      <div class="stat-card">
+        <h3>오늘 방문자</h3>
+        <div class="stat-number" id="todayVisitors">-</div>
+        <div class="stat-label">고유 방문자</div>
+      </div>
+
+      <div class="stat-card">
+        <h3>오늘 페이지뷰</h3>
+        <div class="stat-number" id="todayPageViews">-</div>
+        <div class="stat-label">총 방문 수</div>
+      </div>
+
+      <div class="stat-card">
+        <h3>전체 IP 수</h3>
+        <div class="stat-number" id="totalIPs">-</div>
+        <div class="stat-label">누적 고유 IP</div>
+      </div>
+    </div>
+
+    <div class="data-section">
+      <h2>📊 상위 방문 IP</h2>
+      <div id="topIPsTable" class="loading">로딩 중...</div>
+    </div>
+
+    <div class="data-section">
+      <h2>📅 일별 방문 통계</h2>
+      <div id="dailyStatsTable" class="loading">로딩 중...</div>
+    </div>
+
+    <div class="data-section">
+      <h2>🌍 최근 방문자</h2>
+      <div id="recentVisitorsTable" class="loading">로딩 중...</div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { supabase } from '../scripts/api.js';
+
+    // 대시보드 데이터 로드
+    async function loadDashboard() {
+      try {
+        // 병렬로 모든 데이터 로드
+        const [
+          liveCount,
+          todayStats,
+          topIPs,
+          dailyStats,
+          recentVisitors
+        ] = await Promise.all([
+          getLiveVisitorCount(),
+          getTodayStats(),
+          getTopIPs(),
+          getDailyStats(),
+          getRecentVisitors()
+        ]);
+
+        // 통계 카드 업데이트
+        document.getElementById('liveVisitors').textContent = liveCount;
+        document.getElementById('todayVisitors').textContent = todayStats.unique_visitors;
+        document.getElementById('todayPageViews').textContent = todayStats.total_visits;
+        document.getElementById('totalIPs').textContent = topIPs.length;
+
+        // 테이블 업데이트
+        renderTopIPsTable(topIPs);
+        renderDailyStatsTable(dailyStats);
+        renderRecentVisitorsTable(recentVisitors);
+
+      } catch (error) {
+        console.error('대시보드 로드 실패:', error);
+        showError('데이터를 불러오는데 실패했습니다: ' + error.message);
+      }
+    }
+
+    // 실시간 방문자 수 조회 (안전한 방법)
+    async function getLiveVisitorCount() {
+      try {
+        // 먼저 함수 호출 시도
+        const { data, error } = await supabase.rpc('get_live_visitor_count');
+        if (error) {
+          console.warn('함수 호출 실패, 직접 쿼리로 대체:', error.message);
+          // 대체 방법: 직접 쿼리 (최근 5분 내 고유 세션)
+          const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from('visitor_logs')
+            .select('session_id')
+            .gte('created_at', fiveMinutesAgo)
+            .not('session_id', 'is', null);
+
+          if (fallbackError) throw fallbackError;
+
+          const uniqueSessions = new Set(fallbackData.map(row => row.session_id));
+          return uniqueSessions.size;
+        }
+        return data || 0;
+      } catch (error) {
+        console.error('실시간 방문자 수 조회 오류:', error);
+        return 0;
+      }
+    }    // 오늘 통계 조회
+    async function getTodayStats() {
+      const today = new Date().toISOString().split('T')[0];
+      const { data, error } = await supabase
+        .from('daily_visitor_stats')
+        .select('*')
+        .eq('visit_date', today)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+      return data || { unique_visitors: 0, total_visits: 0 };
+    }
+
+    // 상위 IP 조회 (안전한 방법)
+    async function getTopIPs() {
+      try {
+        const { data, error } = await supabase.rpc('get_ip_visit_stats', { p_limit: 10 });
+        if (error) {
+          console.warn('함수 호출 실패, 직접 쿼리로 대체:', error.message);
+          // 대체 방법: 직접 쿼리로 IP별 방문 통계 계산
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from('visitor_logs')
+            .select('ip_address, created_at, session_id')
+            .not('ip_address', 'is', null)
+            .order('created_at', { ascending: false })
+            .limit(1000); // 최근 1000개 로그만 분석
+
+          if (fallbackError) throw fallbackError;
+
+          // JavaScript로 IP별 통계 계산
+          const ipStats = {};
+          fallbackData.forEach(row => {
+            const ip = row.ip_address;
+            if (!ipStats[ip]) {
+              ipStats[ip] = {
+                ip_address: ip,
+                visit_count: 0,
+                last_visit: row.created_at,
+                unique_sessions: new Set()
+              };
+            }
+            ipStats[ip].visit_count++;
+            ipStats[ip].unique_sessions.add(row.session_id);
+            if (new Date(row.created_at) > new Date(ipStats[ip].last_visit)) {
+              ipStats[ip].last_visit = row.created_at;
+            }
+          });
+
+          // 방문 수 기준 정렬 후 상위 10개 반환
+          return Object.values(ipStats)
+            .map(stat => ({
+              ...stat,
+              unique_sessions: stat.unique_sessions.size
+            }))
+            .sort((a, b) => b.visit_count - a.visit_count)
+            .slice(0, 10);
+        }
+        return data || [];
+      } catch (error) {
+        console.error('상위 IP 조회 오류:', error);
+        return [];
+      }
+      // 일별 통계 조회
+      async function getDailyStats() {
+        const { data, error } = await supabase
+          .from('daily_visitor_stats')
+          .select('*')
+          .order('visit_date', { ascending: false })
+          .limit(7);
+
+        if (error) throw error;
+        return data || [];
+      }
+
+      // 최근 방문자 조회
+      async function getRecentVisitors() {
+        const { data, error } = await supabase
+          .from('visitor_logs')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(20);
+
+        if (error) throw error;
+        return data || [];
+      }
+
+      // 상위 IP 테이블 렌더링
+      function renderTopIPsTable(data) {
+        const container = document.getElementById('topIPsTable');
+
+        if (!data.length) {
+          container.innerHTML = '<p>데이터가 없습니다.</p>';
+          return;
+        }
+
+        const table = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>IP 주소</th>
+                            <th>방문 횟수</th>
+                            <th>최근 방문</th>
+                            <th>최초 방문</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.map(row => `
+                            <tr>
+                                <td>${row.ip_address}</td>
+                                <td>${row.visit_count}</td>
+                                <td>${new Date(row.last_visit).toLocaleString('ko-KR')}</td>
+                                <td>${new Date(row.first_visit).toLocaleString('ko-KR')}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+
+        container.innerHTML = table;
+      }
+
+      // 일별 통계 테이블 렌더링
+      function renderDailyStatsTable(data) {
+        const container = document.getElementById('dailyStatsTable');
+
+        if (!data.length) {
+          container.innerHTML = '<p>데이터가 없습니다.</p>';
+          return;
+        }
+
+        const table = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>날짜</th>
+                            <th>고유 방문자</th>
+                            <th>총 방문 수</th>
+                            <th>로그인 사용자</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.map(row => `
+                            <tr>
+                                <td>${row.visit_date}</td>
+                                <td>${row.unique_visitors}</td>
+                                <td>${row.total_visits}</td>
+                                <td>${row.authenticated_users}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+
+        container.innerHTML = table;
+      }
+
+      // 최근 방문자 테이블 렌더링
+      function renderRecentVisitorsTable(data) {
+        const container = document.getElementById('recentVisitorsTable');
+
+        if (!data.length) {
+          container.innerHTML = '<p>데이터가 없습니다.</p>';
+          return;
+        }
+
+        const table = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>IP 주소</th>
+                            <th>디바이스</th>
+                            <th>브라우저</th>
+                            <th>OS</th>
+                            <th>방문 시간</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.map(row => `
+                            <tr>
+                                <td>${row.ip_address}</td>
+                                <td>${row.device_type || '-'}</td>
+                                <td>${row.browser || '-'}</td>
+                                <td>${row.os || '-'}</td>
+                                <td>${new Date(row.created_at).toLocaleString('ko-KR')}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+
+        container.innerHTML = table;
+      }
+
+      // 에러 표시
+      function showError(message) {
+        const errorDiv = `<div class="error">❌ ${message}</div>`;
+        document.querySelectorAll('.loading').forEach(el => {
+          el.innerHTML = errorDiv;
+        });
+      }
+
+      // 전역 함수로 등록
+      window.loadDashboard = loadDashboard;
+
+      // 페이지 로드 시 대시보드 초기화
+      document.addEventListener('DOMContentLoaded', loadDashboard);
+
+      // 30초마다 자동 새로고침
+      setInterval(loadDashboard, 30000);
+  </script>
+</body>
+
+</html>

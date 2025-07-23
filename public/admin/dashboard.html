@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>방문자 대시보드 - 프록시 버전</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      text-align: center;
+      color: white;
+      margin-bottom: 30px;
+      font-size: 2.5rem;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .dashboard {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 15px;
+      padding: 25px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .card h3 {
+      color: #333;
+      margin-bottom: 15px;
+      font-size: 1.2rem;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 8px;
+    }
+
+    .stat-value {
+      font-size: 2.5rem;
+      font-weight: bold;
+      color: #667eea;
+      text-align: center;
+      margin: 15px 0;
+    }
+
+    .stat-label {
+      text-align: center;
+      color: #666;
+      font-size: 0.9rem;
+    }
+
+    .error {
+      color: #e74c3c;
+      text-align: center;
+      padding: 20px;
+      background: rgba(231, 76, 60, 0.1);
+      border-radius: 8px;
+      margin: 10px 0;
+    }
+
+    .success {
+      color: #27ae60;
+      text-align: center;
+      padding: 10px;
+      background: rgba(39, 174, 96, 0.1);
+      border-radius: 8px;
+      margin: 10px 0;
+    }
+
+    .loading {
+      text-align: center;
+      color: #666;
+      padding: 20px;
+    }
+
+    .refresh-btn,
+    .test-btn {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1rem;
+      margin: 5px;
+    }
+
+    .refresh-btn:hover,
+    .test-btn:hover {
+      background: #5a67d8;
+    }
+
+    .status-bar {
+      background: rgba(255, 255, 255, 0.9);
+      padding: 15px;
+      border-radius: 10px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .test-section {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 15px;
+      padding: 25px;
+      margin-top: 20px;
+    }
+
+    .test-result {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 5px;
+      padding: 10px;
+      margin: 10px 0;
+      font-family: monospace;
+      white-space: pre-wrap;
+      max-height: 300px;
+      overflow-y: auto;
+      display: none;
+    }
+
+    .ip-list {
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .ip-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #eee;
+    }
+
+    .ip-item:last-child {
+      border-bottom: none;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      text-align: center;
+    }
+
+    .stat-mini {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #667eea;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>🚀 방문자 대시보드 (프록시 버전)</h1>
+
+    <div class="status-bar">
+      <div id="connectionStatus">연결 확인 중...</div>
+      <button class="refresh-btn" onclick="refreshAll()">전체 새로고침</button>
+      <button class="refresh-btn" onclick="testAllFunctions()">모든 함수 테스트</button>
+    </div>
+
+    <div class="dashboard">
+      <!-- 실시간 방문자 -->
+      <div class="card">
+        <h3>🔴 실시간 방문자</h3>
+        <div id="liveVisitors" class="loading">로딩 중...</div>
+      </div>
+
+      <!-- 오늘 통계 -->
+      <div class="card">
+        <h3>📊 오늘 통계</h3>
+        <div id="todayStats" class="loading">로딩 중...</div>
+      </div>
+
+      <!-- 전체 통계 -->
+      <div class="card">
+        <h3>📈 전체 통계</h3>
+        <div id="totalStats" class="loading">로딩 중...</div>
+      </div>
+
+      <!-- TOP IP 주소 -->
+      <div class="card">
+        <h3>🌐 TOP IP 주소</h3>
+        <div id="topIPs" class="loading">로딩 중...</div>
+      </div>
+
+      <!-- 최근 방문자 -->
+      <div class="card">
+        <h3>👥 최근 방문자</h3>
+        <div id="recentVisitors" class="loading">로딩 중...</div>
+      </div>
+
+      <!-- 현재 IP 정보 -->
+      <div class="card">
+        <h3>🌍 현재 IP 정보</h3>
+        <div id="currentIP" class="loading">확인 중...</div>
+      </div>
+    </div>
+
+    <!-- 테스트 섹션 -->
+    <div class="test-section">
+      <h3>🔧 테스트 및 디버깅 도구</h3>
+      <div>
+        <button class="test-btn" onclick="testConnection()">연결 테스트</button>
+        <button class="test-btn" onclick="testDirectQuery()">직접 쿼리</button>
+        <button class="test-btn" onclick="testFunction('get_live_visitor_count')">실시간 방문자 함수</button>
+        <button class="test-btn" onclick="testFunction('get_today_visitor_stats')">오늘 통계 함수</button>
+        <button class="test-btn" onclick="testFunction('get_total_visitor_stats')">전체 통계 함수</button>
+        <button class="test-btn" onclick="addTestVisitor()">테스트 방문자 추가</button>
+        <button class="test-btn" onclick="clearResults()">결과 지우기</button>
+      </div>
+      <div id="testResult" class="test-result"></div>
+    </div>
+  </div>
+
+  <script>
+    // 환경에 따른 API URL 자동 설정
+    function getApiBaseUrl() {
+      const hostname = window.location.hostname;
+      const protocol = window.location.protocol;
+
+      // Vercel 배포 환경
+      if (hostname.includes('vercel.app') || hostname.includes('.app')) {
+        return `${protocol}//${hostname}`;
+      }
+
+      // 로컬 개발 환경
+      if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        return 'http://localhost:3001';
+      }
+
+      // 기타 환경 (현재 호스트 사용)
+      return `${protocol}//${hostname}`;
+    }
+
+    // 프록시 기반 API 클라이언트
+    class ProxySupabaseClient {
+      constructor(baseUrl) {
+        this.baseUrl = baseUrl;
+      }
+
+      async rpc(functionName, params = {}) {
+        try {
+          const response = await fetch(`${this.baseUrl}/api/rest/v1/rpc/${functionName}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(params)
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          return await response.json();
+        } catch (error) {
+          console.error('RPC error:', error);
+          throw error;
+        }
+      }
+
+      async select(table, options = {}) {
+        try {
+          let url = `${this.baseUrl}/api/rest/v1/${table}`;
+          const params = new URLSearchParams();
+
+          if (options.select) params.append('select', options.select);
+          if (options.limit) params.append('limit', options.limit);
+          if (options.order) params.append('order', options.order);
+          if (options.gte) {
+            for (const [key, value] of Object.entries(options.gte)) {
+              params.append(`${key}`, `gte.${value}`);
+            }
+          }
+          if (options.lt) {
+            for (const [key, value] of Object.entries(options.lt)) {
+              params.append(`${key}`, `lt.${value}`);
+            }
+          }
+          if (options.not) {
+            for (const [key, value] of Object.entries(options.not)) {
+              params.append(`${key}`, `not.is.${value}`);
+            }
+          }
+
+          if (params.toString()) {
+            url += '?' + params.toString();
+          }
+
+          const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          const data = await response.json();
+          return { data, error: null };
+        } catch (error) {
+          console.error('Select error:', error);
+          return { data: null, error };
+        }
+      }
+
+      async insert(table, data) {
+        try {
+          const response = await fetch(`${this.baseUrl}/api/rest/v1/${table}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Prefer': 'return=representation'
+            },
+            body: JSON.stringify(data)
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          const result = await response.json();
+          return { data: result, error: null };
+        } catch (error) {
+          console.error('Insert error:', error);
+          return { data: null, error };
+        }
+      }
+    }
+
+    // 클라이언트 초기화 (환경에 따른 자동 설정)
+    const API_BASE_URL = getApiBaseUrl();
+    const supabase = new ProxySupabaseClient(API_BASE_URL);
+
+    console.log('🚀 API Base URL:', API_BASE_URL);
+
+    // 현재 IP 확인
+    async function getCurrentIP() {
+      try {
+        const response = await fetch('https://api.ipify.org?format=json');
+        const data = await response.json();
+
+        document.getElementById('currentIP').innerHTML = `
+                    <div class="stat-value" style="font-size: 1.8rem;">${data.ip}</div>
+                    <div class="stat-label">내 IP 주소</div>
+                `;
+      } catch (error) {
+        document.getElementById('currentIP').innerHTML = `
+                    <div class="error">IP 확인 실패: ${error.message}</div>
+                `;
+      }
+    }
+
+    // 연결 상태 확인
+    async function checkConnection() {
+      try {
+        const result = await supabase.select('visitor_logs', { select: 'id', limit: 1 });
+
+        if (result.error) throw result.error;
+
+        document.getElementById('connectionStatus').innerHTML =
+          `<span style="color: green;">✅ 연결 성공 (${API_BASE_URL})</span>`;
+        return true;
+      } catch (error) {
+        document.getElementById('connectionStatus').innerHTML =
+          `<span style="color: red;">❌ 연결 실패 (${API_BASE_URL}): ${error.message}</span>`;
+        return false;
+      }
+    }
+
+    // 실시간 방문자 로드
+    async function loadLiveVisitors() {
+      try {
+        // 먼저 함수 시도
+        try {
+          const data = await supabase.rpc('get_live_visitor_count');
+
+          document.getElementById('liveVisitors').innerHTML = `
+                        <div class="stat-value">${data || 0}</div>
+                        <div class="stat-label">명 (최근 5분, 함수)</div>
+                    `;
+          return;
+        } catch (error) {
+          console.log('함수 실패, 직접 쿼리 시도:', error);
+        }
+
+        // 직접 쿼리
+        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+
+        const result = await supabase.select('visitor_logs', {
+          select: 'session_id',
+          gte: { created_at: fiveMinutesAgo },
+          not: { session_id: null }
+        });
+
+        if (result.error) throw result.error;
+
+        const uniqueSessions = new Set(result.data.map(row => row.session_id)).size;
+
+        document.getElementById('liveVisitors').innerHTML = `
+                    <div class="stat-value">${uniqueSessions}</div>
+                    <div class="stat-label">명 (최근 5분, 직접쿼리)</div>
+                `;
+      } catch (error) {
+        document.getElementById('liveVisitors').innerHTML =
+          `<div class="error">오류: ${error.message}</div>`;
+      }
+    }
+
+    // 오늘 통계 로드
+    async function loadTodayStats() {
+      try {
+        // 먼저 함수 시도
+        try {
+          const data = await supabase.rpc('get_today_visitor_stats');
+
+          document.getElementById('todayStats').innerHTML = `
+                        <div class="stats-grid">
+                            <div>
+                                <div class="stat-mini">${data.total_visits || 0}</div>
+                                <div class="stat-label">총 방문</div>
+                            </div>
+                            <div>
+                                <div class="stat-mini">${data.unique_visitors || 0}</div>
+                                <div class="stat-label">순 방문자</div>
+                            </div>
+                            <div>
+                                <div class="stat-mini">${data.unique_ips || 0}</div>
+                                <div class="stat-label">순 IP</div>
+                            </div>
+                            <div>
+                                <div class="stat-mini">${data.authenticated_users || 0}</div>
+                                <div class="stat-label">인증 사용자</div>
+                            </div>
+                        </div>
+                        <div class="success">함수 사용 성공!</div>
+                    `;
+          return;
+        } catch (error) {
+          console.log('함수 실패, 직접 쿼리 시도:', error);
+        }
+
+        // 직접 쿼리
+        const today = new Date().toISOString().split('T')[0];
+
+        const result = await supabase.select('visitor_logs', {
+          select: 'session_id, ip_address, user_id',
+          gte: { created_at: today + 'T00:00:00.000Z' },
+          lt: { created_at: today + 'T23:59:59.999Z' }
+        });
+
+        if (result.error) throw result.error;
+
+        const totalVisits = result.data.length;
+        const uniqueVisitors = new Set(result.data.map(row => row.session_id)).size;
+        const uniqueIPs = new Set(result.data.map(row => row.ip_address)).size;
+        const authenticatedUsers = new Set(result.data.filter(row => row.user_id).map(row => row.user_id)).size;
+
+        document.getElementById('todayStats').innerHTML = `
+                    <div class="stats-grid">
+                        <div>
+                            <div class="stat-mini">${totalVisits}</div>
+                            <div class="stat-label">총 방문</div>
+                        </div>
+                        <div>
+                            <div class="stat-mini">${uniqueVisitors}</div>
+                            <div class="stat-label">순 방문자</div>
+                        </div>
+                        <div>
+                            <div class="stat-mini">${uniqueIPs}</div>
+                            <div class="stat-label">순 IP</div>
+                        </div>
+                        <div>
+                            <div class="stat-mini">${authenticatedUsers}</div>
+                            <div class="stat-label">인증 사용자</div>
+                        </div>
+                    </div>
+                    <div style="text-align: center; margin-top: 10px; color: #666; font-size: 0.8rem;">
+                        (직접 쿼리 결과)
+                    </div>
+                `;
+      } catch (error) {
+        document.getElementById('todayStats').innerHTML =
+          `<div class="error">오류: ${error.message}</div>`;
+      }
+    }
+
+    // 전체 통계 로드
+    async function loadTotalStats() {
+      try {
+        // 먼저 함수 시도
+        try {
+          const data = await supabase.rpc('get_total_visitor_stats');
+
+          document.getElementById('totalStats').innerHTML = `
+                        <div class="stats-grid">
+                            <div>
+                                <div class="stat-mini">${data.total_visits || 0}</div>
+                                <div class="stat-label">총 방문</div>
+                            </div>
+                            <div>
+                                <div class="stat-mini">${data.total_unique_visitors || 0}</div>
+                                <div class="stat-label">순 방문자</div>
+                            </div>
+                            <div>
+                                <div class="stat-mini">${data.total_unique_ips || 0}</div>
+                                <div class="stat-label">순 IP</div>
+                            </div>
+                        </div>
+                        <div class="success">함수 사용 성공!</div>
+                        <div style="text-align: center; margin-top: 10px; color: #666; font-size: 0.8rem;">
+                            수집 시작: ${data.first_visit ? new Date(data.first_visit).toLocaleDateString() : 'N/A'}
+                        </div>
+                    `;
+          return;
+        } catch (error) {
+          console.log('함수 실패, 직접 쿼리 시도:', error);
+        }
+
+        // 직접 쿼리
+        const result = await supabase.select('visitor_logs', {
+          select: 'session_id, ip_address, created_at'
+        });
+
+        if (result.error) throw result.error;
+
+        const totalVisits = result.data.length;
+        const totalUniqueVisitors = new Set(result.data.map(row => row.session_id)).size;
+        const totalUniqueIPs = new Set(result.data.map(row => row.ip_address)).size;
+
+        document.getElementById('totalStats').innerHTML = `
+                    <div class="stats-grid">
+                        <div>
+                            <div class="stat-mini">${totalVisits}</div>
+                            <div class="stat-label">총 방문</div>
+                        </div>
+                        <div>
+                            <div class="stat-mini">${totalUniqueVisitors}</div>
+                            <div class="stat-label">순 방문자</div>
+                        </div>
+                        <div>
+                            <div class="stat-mini">${totalUniqueIPs}</div>
+                            <div class="stat-label">순 IP</div>
+                        </div>
+                    </div>
+                    <div style="text-align: center; margin-top: 10px; color: #666; font-size: 0.8rem;">
+                        (직접 쿼리 결과)
+                    </div>
+                `;
+      } catch (error) {
+        document.getElementById('totalStats').innerHTML =
+          `<div class="error">오류: ${error.message}</div>`;
+      }
+    }
+
+    // TOP IP 로드
+    async function loadTopIPs() {
+      try {
+        // 먼저 함수 시도
+        try {
+          const data = await supabase.rpc('get_ip_visit_stats', { p_limit: 5 });
+
+          document.getElementById('topIPs').innerHTML = `
+                        <div class="ip-list">
+                            ${data.map(ip => `
+                                <div class="ip-item">
+                                    <div>
+                                        <strong>${ip.ip_address}</strong><br>
+                                        <small>${ip.unique_sessions}개 세션</small>
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <strong>${ip.visit_count}회</strong><br>
+                                        <small>${new Date(ip.last_visit).toLocaleDateString()}</small>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="success">함수 사용 성공!</div>
+                    `;
+          return;
+        } catch (error) {
+          console.log('함수 실패, 직접 쿼리 시도:', error);
+        }
+
+        // 직접 쿼리
+        const result = await supabase.select('visitor_logs', {
+          select: 'ip_address, created_at, session_id',
+          not: { ip_address: null }
+        });
+
+        if (result.error) throw result.error;
+
+        // IP별 통계 계산
+        const ipStats = {};
+        result.data.forEach(row => {
+          const ip = row.ip_address;
+          if (!ipStats[ip]) {
+            ipStats[ip] = {
+              count: 0,
+              sessions: new Set(),
+              lastVisit: row.created_at
+            };
+          }
+          ipStats[ip].count++;
+          ipStats[ip].sessions.add(row.session_id);
+          if (row.created_at > ipStats[ip].lastVisit) {
+            ipStats[ip].lastVisit = row.created_at;
+          }
+        });
+
+        const sortedIPs = Object.entries(ipStats)
+          .sort(([, a], [, b]) => b.count - a.count)
+          .slice(0, 5);
+
+        document.getElementById('topIPs').innerHTML = `
+                    <div class="ip-list">
+                        ${sortedIPs.map(([ip, stats]) => `
+                            <div class="ip-item">
+                                <div>
+                                    <strong>${ip}</strong><br>
+                                    <small>${stats.sessions.size}개 세션</small>
+                                </div>
+                                <div style="text-align: right;">
+                                    <strong>${stats.count}회</strong><br>
+                                    <small>${new Date(stats.lastVisit).toLocaleDateString()}</small>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div style="text-align: center; margin-top: 10px; color: #666; font-size: 0.8rem;">
+                        (직접 쿼리 결과)
+                    </div>
+                `;
+      } catch (error) {
+        document.getElementById('topIPs').innerHTML =
+          `<div class="error">오류: ${error.message}</div>`;
+      }
+    }
+
+    // 최근 방문자 로드
+    async function loadRecentVisitors() {
+      try {
+        const result = await supabase.select('visitor_logs', {
+          select: 'ip_address, device_type, browser, os, created_at, url',
+          order: 'created_at.desc',
+          limit: 5
+        });
+
+        if (result.error) throw result.error;
+
+        document.getElementById('recentVisitors').innerHTML = `
+                    <div style="max-height: 200px; overflow-y: auto;">
+                        ${result.data.map(visitor => `
+                            <div class="ip-item">
+                                <div>
+                                    <strong>${visitor.ip_address || 'Unknown'}</strong><br>
+                                    <small>${visitor.device_type || 'Unknown'} | ${visitor.browser || 'Unknown'}</small>
+                                </div>
+                                <div style="text-align: right;">
+                                    <small>${new Date(visitor.created_at).toLocaleString()}</small>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+      } catch (error) {
+        document.getElementById('recentVisitors').innerHTML =
+          `<div class="error">오류: ${error.message}</div>`;
+      }
+    }
+
+    // 전체 새로고침
+    window.refreshAll = async function () {
+      document.getElementById('liveVisitors').innerHTML = '<div class="loading">로딩 중...</div>';
+      document.getElementById('todayStats').innerHTML = '<div class="loading">로딩 중...</div>';
+      document.getElementById('totalStats').innerHTML = '<div class="loading">로딩 중...</div>';
+      document.getElementById('topIPs').innerHTML = '<div class="loading">로딩 중...</div>';
+      document.getElementById('recentVisitors').innerHTML = '<div class="loading">로딩 중...</div>';
+
+      await checkConnection();
+      await getCurrentIP();
+      await loadLiveVisitors();
+      await loadTodayStats();
+      await loadTotalStats();
+      await loadTopIPs();
+      await loadRecentVisitors();
+    };
+
+    // 테스트 함수들
+    window.testConnection = async function () {
+      const testResult = document.getElementById('testResult');
+      testResult.style.display = 'block';
+      testResult.textContent = `연결 테스트 중... (${API_BASE_URL})`;
+
+      const isConnected = await checkConnection();
+      testResult.textContent = isConnected ?
+        `✅ 연결 성공! (${API_BASE_URL})` :
+        `❌ 연결 실패! (${API_BASE_URL})`;
+    };
+
+    window.testDirectQuery = async function () {
+      const testResult = document.getElementById('testResult');
+      testResult.style.display = 'block';
+      testResult.textContent = '직접 쿼리 테스트 중...';
+
+      try {
+        const result = await supabase.select('visitor_logs', { select: '*', limit: 3 });
+
+        if (result.error) throw result.error;
+
+        testResult.textContent = `✅ 직접 쿼리 성공!\n결과 수: ${result.data.length}\n데이터:\n${JSON.stringify(result.data, null, 2)}`;
+      } catch (error) {
+        testResult.textContent = `❌ 직접 쿼리 실패!\n오류: ${error.message}`;
+      }
+    };
+
+    window.testFunction = async function (functionName) {
+      const testResult = document.getElementById('testResult');
+      testResult.style.display = 'block';
+      testResult.textContent = `${functionName} 함수 테스트 중...`;
+
+      try {
+        const result = await supabase.rpc(functionName);
+        testResult.textContent = `✅ ${functionName} 성공!\n결과:\n${JSON.stringify(result, null, 2)}`;
+      } catch (error) {
+        testResult.textContent = `❌ ${functionName} 실패!\n오류: ${error.message}`;
+      }
+    };
+
+    window.testAllFunctions = async function () {
+      const testResult = document.getElementById('testResult');
+      testResult.style.display = 'block';
+      testResult.textContent = '모든 함수 테스트 중...\n\n';
+
+      const functions = [
+        'get_live_visitor_count',
+        'get_today_visitor_stats',
+        'get_total_visitor_stats'
+      ];
+
+      for (const func of functions) {
+        try {
+          const result = await supabase.rpc(func);
+          testResult.textContent += `✅ ${func}: ${JSON.stringify(result)}\n\n`;
+        } catch (error) {
+          testResult.textContent += `❌ ${func}: ${error.message}\n\n`;
+        }
+      }
+    };
+
+    window.addTestVisitor = async function () {
+      const testResult = document.getElementById('testResult');
+      testResult.style.display = 'block';
+      testResult.textContent = '테스트 방문자 추가 중...';
+
+      try {
+        const testData = {
+          ip_address: '127.0.0.1',
+          user_agent: 'Test Browser',
+          device_type: 'Desktop',
+          browser: 'Test',
+          os: 'Test OS',
+          session_id: 'test-session-' + Date.now(),
+          url: '/admin/proxy-dashboard.html',
+          created_at: new Date().toISOString()
+        };
+
+        const result = await supabase.insert('visitor_logs', testData);
+
+        if (result.error) throw result.error;
+
+        testResult.textContent = `✅ 테스트 방문자 추가 성공!\n데이터: ${JSON.stringify(result.data, null, 2)}`;
+
+        // 자동 새로고침
+        setTimeout(refreshAll, 1000);
+      } catch (error) {
+        testResult.textContent = `❌ 테스트 방문자 추가 실패!\n오류: ${error.message}`;
+      }
+    };
+
+    window.clearResults = function () {
+      document.getElementById('testResult').style.display = 'none';
+    };
+
+    // 초기 로드
+    document.addEventListener('DOMContentLoaded', () => {
+      refreshAll();
+
+      // 30초마다 자동 새로고침
+      setInterval(refreshAll, 30000);
+    });
+  </script>
+</body>
+
+</html>

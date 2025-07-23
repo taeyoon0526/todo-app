@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "python -m http.server 8000",
-    "build": "echo 'Static build complete - no bundling needed'",
+    "build": "mkdir -p public && cp index.html styles.css sw.js public/ && cp -r scripts admin public/",
     "start": "python -m http.server 8000",
     "preview": "python -m http.server 8080",
     "deploy": "vercel --prod",
