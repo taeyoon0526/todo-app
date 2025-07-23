@@ -79,10 +79,30 @@ WHERE device_type IS NOT NULL
 GROUP BY device_type
 ORDER BY visits DESC;
 
--- 7. 방문자 추적 함수들 테스트
-SELECT '🧪 함수 테스트' as section, 'get_live_visitor_count' as function_name, public.get_live_visitor_count() as result
+-- 7. 방문자 추적 함수들 테스트 (안전한 방식)
+SELECT '🧪 함수 테스트' as section, 'get_live_visitor_count' as function_name, 
+    CASE 
+        WHEN EXISTS (SELECT 1 FROM information_schema.routines WHERE routine_name = 'get_live_visitor_count')
+        THEN public.get_live_visitor_count()::text
+        ELSE '함수 없음 - MISSING_FUNCTIONS.sql 실행 필요'
+    END as result
 UNION ALL
-SELECT '🧪 함수 테스트', 'debug_visitor_stats', public.debug_visitor_stats()::text;
+SELECT '🧪 함수 테스트', 'debug_visitor_stats', 
+    CASE 
+        WHEN EXISTS (SELECT 1 FROM information_schema.routines WHERE routine_name = 'debug_visitor_stats')
+        THEN public.debug_visitor_stats()::text
+        ELSE '함수 없음 - IP_TRACKING_TEST.sql 실행 필요'
+    END;
+
+-- 7-1. 새로운 함수들 테스트 (MISSING_FUNCTIONS.sql 실행 후)
+SELECT '📊 오늘 통계' as section, public.get_today_visitor_stats() as result
+WHERE EXISTS (SELECT 1 FROM information_schema.routines WHERE routine_name = 'get_today_visitor_stats');
+
+SELECT '🕐 시간대별 패턴' as section, json_agg(
+    json_build_object('hour', hour, 'visits', visit_count, 'unique', unique_visitors)
+) as hourly_data
+FROM public.get_hourly_visitor_pattern()
+WHERE EXISTS (SELECT 1 FROM information_schema.routines WHERE routine_name = 'get_hourly_visitor_pattern');
 
 -- 8. 최근 1시간 방문자 활동
 SELECT 

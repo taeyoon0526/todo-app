@@ -10,14 +10,29 @@ if (typeof window.visitorTracker !== 'undefined') {
 } else {
     console.log('❌ window.visitorTracker 없음');
     
-    // 동적 import로 로드 시도
-    import('./scripts/visitor-tracker.js').then(module => {
-        window.visitorTracker = module.visitorTracker;
-        console.log('✅ 동적 import로 방문자 추적기 로드 완료');
-        testVisitorTracker();
-    }).catch(error => {
-        console.error('❌ 동적 import 실패:', error);
-    });
+    // 동적 import로 로드 시도 (수정된 경로)
+    const importPaths = [
+        './visitor-tracker.js',
+        '/scripts/visitor-tracker.js',
+        '../scripts/visitor-tracker.js'
+    ];
+    
+    for (const path of importPaths) {
+        try {
+            console.log(`🔄 시도 중: ${path}`);
+            const module = await import(path);
+            if (module.visitorTracker || module.default) {
+                window.visitorTracker = module.visitorTracker || module.default;
+                console.log('✅ 동적 import로 방문자 추적기 로드 완료');
+                testVisitorTracker();
+                return;
+            }
+        } catch (error) {
+            console.log(`❌ ${path} 로드 실패:`, error.message);
+        }
+    }
+    
+    console.log('❌ 모든 import 경로 실패');
 }
 
 // 2. 방문자 추적기 테스트 함수

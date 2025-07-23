@@ -251,17 +251,20 @@
       }
     }
 
-    // 실시간 방문자 수 조회 (간단한 방법)
+    // 실시간 방문자 수 조회 (안전한 방법)
     async function getLiveVisitorCount() {
       try {
+        // 먼저 함수 호출 시도
         const { data, error } = await supabase.rpc('get_live_visitor_count');
         if (error) {
-          console.error('실시간 방문자 수 조회 실패:', error);
-          // 대체 방법: 직접 쿼리
+          console.warn('함수 호출 실패, 직접 쿼리로 대체:', error.message);
+          // 대체 방법: 직접 쿼리 (최근 5분 내 고유 세션)
+          const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
           const { data: fallbackData, error: fallbackError } = await supabase
             .from('visitor_logs')
             .select('session_id')
-            .gte('created_at', new Date(Date.now() - 30 * 60 * 1000).toISOString());
+            .gte('created_at', fiveMinutesAgo)
+            .not('session_id', 'is', null);
 
           if (fallbackError) throw fallbackError;
 
@@ -286,44 +289,47 @@
       return data || { unique_visitors: 0, total_visits: 0 };
     }
 
-    // 상위 IP 조회 (간단한 방법)
+    // 상위 IP 조회 (안전한 방법)
     async function getTopIPs() {
       try {
         const { data, error } = await supabase.rpc('get_ip_visit_stats', { p_limit: 10 });
         if (error) {
-          console.error('상위 IP 조회 실패:', error);
-          // 대체 방법: 직접 쿼리
+          console.warn('함수 호출 실패, 직접 쿼리로 대체:', error.message);
+          // 대체 방법: 직접 쿼리로 IP별 방문 통계 계산
           const { data: fallbackData, error: fallbackError } = await supabase
             .from('visitor_logs')
-            .select('ip_address, created_at')
+            .select('ip_address, created_at, session_id')
             .not('ip_address', 'is', null)
             .order('created_at', { ascending: false })
-            .limit(100);
+            .limit(1000); // 최근 1000개 로그만 분석
 
           if (fallbackError) throw fallbackError;
 
-          // JavaScript에서 그룹핑
-          const ipCounts = {};
+          // JavaScript로 IP별 통계 계산
+          const ipStats = {};
           fallbackData.forEach(row => {
             const ip = row.ip_address;
-            if (!ipCounts[ip]) {
-              ipCounts[ip] = {
+            if (!ipStats[ip]) {
+              ipStats[ip] = {
                 ip_address: ip,
                 visit_count: 0,
-                first_visit: row.created_at,
-                last_visit: row.created_at
+                last_visit: row.created_at,
+                unique_sessions: new Set()
               };
             }
-            ipCounts[ip].visit_count++;
-            if (row.created_at > ipCounts[ip].last_visit) {
-              ipCounts[ip].last_visit = row.created_at;
-            }
-            if (row.created_at < ipCounts[ip].first_visit) {
-              ipCounts[ip].first_visit = row.created_at;
+            ipStats[ip].visit_count++;
+            ipStats[ip].unique_sessions.add(row.session_id);
+            if (new Date(row.created_at) > new Date(ipStats[ip].last_visit)) {
+              ipStats[ip].last_visit = row.created_at;
             }
           });
 
-          return Object.values(ipCounts)
+          // 방문 수 기준 정렬 후 상위 10개 반환
+          return Object.values(ipStats)
+            .map(stat => ({
+              ...stat,
+              unique_sessions: stat.unique_sessions.size
+            }))
             .sort((a, b) => b.visit_count - a.visit_count)
             .slice(0, 10);
         }
@@ -332,40 +338,40 @@
         console.error('상위 IP 조회 오류:', error);
         return [];
       }
-    }    // 일별 통계 조회
-    async function getDailyStats() {
-      const { data, error } = await supabase
-        .from('daily_visitor_stats')
-        .select('*')
-        .order('visit_date', { ascending: false })
-        .limit(7);
+      // 일별 통계 조회
+      async function getDailyStats() {
+        const { data, error } = await supabase
+          .from('daily_visitor_stats')
+          .select('*')
+          .order('visit_date', { ascending: false })
+          .limit(7);
 
-      if (error) throw error;
-      return data || [];
-    }
-
-    // 최근 방문자 조회
-    async function getRecentVisitors() {
-      const { data, error } = await supabase
-        .from('visitor_logs')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(20);
-
-      if (error) throw error;
-      return data || [];
-    }
-
-    // 상위 IP 테이블 렌더링
-    function renderTopIPsTable(data) {
-      const container = document.getElementById('topIPsTable');
-
-      if (!data.length) {
-        container.innerHTML = '<p>데이터가 없습니다.</p>';
-        return;
+        if (error) throw error;
+        return data || [];
       }
 
-      const table = `
+      // 최근 방문자 조회
+      async function getRecentVisitors() {
+        const { data, error } = await supabase
+          .from('visitor_logs')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(20);
+
+        if (error) throw error;
+        return data || [];
+      }
+
+      // 상위 IP 테이블 렌더링
+      function renderTopIPsTable(data) {
+        const container = document.getElementById('topIPsTable');
+
+        if (!data.length) {
+          container.innerHTML = '<p>데이터가 없습니다.</p>';
+          return;
+        }
+
+        const table = `
                 <table class="data-table">
                     <thead>
                         <tr>
@@ -388,19 +394,19 @@
                 </table>
             `;
 
-      container.innerHTML = table;
-    }
-
-    // 일별 통계 테이블 렌더링
-    function renderDailyStatsTable(data) {
-      const container = document.getElementById('dailyStatsTable');
-
-      if (!data.length) {
-        container.innerHTML = '<p>데이터가 없습니다.</p>';
-        return;
+        container.innerHTML = table;
       }
 
-      const table = `
+      // 일별 통계 테이블 렌더링
+      function renderDailyStatsTable(data) {
+        const container = document.getElementById('dailyStatsTable');
+
+        if (!data.length) {
+          container.innerHTML = '<p>데이터가 없습니다.</p>';
+          return;
+        }
+
+        const table = `
                 <table class="data-table">
                     <thead>
                         <tr>
@@ -423,19 +429,19 @@
                 </table>
             `;
 
-      container.innerHTML = table;
-    }
-
-    // 최근 방문자 테이블 렌더링
-    function renderRecentVisitorsTable(data) {
-      const container = document.getElementById('recentVisitorsTable');
-
-      if (!data.length) {
-        container.innerHTML = '<p>데이터가 없습니다.</p>';
-        return;
+        container.innerHTML = table;
       }
 
-      const table = `
+      // 최근 방문자 테이블 렌더링
+      function renderRecentVisitorsTable(data) {
+        const container = document.getElementById('recentVisitorsTable');
+
+        if (!data.length) {
+          container.innerHTML = '<p>데이터가 없습니다.</p>';
+          return;
+        }
+
+        const table = `
                 <table class="data-table">
                     <thead>
                         <tr>
@@ -460,25 +466,25 @@
                 </table>
             `;
 
-      container.innerHTML = table;
-    }
+        container.innerHTML = table;
+      }
 
-    // 에러 표시
-    function showError(message) {
-      const errorDiv = `<div class="error">❌ ${message}</div>`;
-      document.querySelectorAll('.loading').forEach(el => {
-        el.innerHTML = errorDiv;
-      });
-    }
+      // 에러 표시
+      function showError(message) {
+        const errorDiv = `<div class="error">❌ ${message}</div>`;
+        document.querySelectorAll('.loading').forEach(el => {
+          el.innerHTML = errorDiv;
+        });
+      }
 
-    // 전역 함수로 등록
-    window.loadDashboard = loadDashboard;
+      // 전역 함수로 등록
+      window.loadDashboard = loadDashboard;
 
-    // 페이지 로드 시 대시보드 초기화
-    document.addEventListener('DOMContentLoaded', loadDashboard);
+      // 페이지 로드 시 대시보드 초기화
+      document.addEventListener('DOMContentLoaded', loadDashboard);
 
-    // 30초마다 자동 새로고침
-    setInterval(loadDashboard, 30000);
+      // 30초마다 자동 새로고침
+      setInterval(loadDashboard, 30000);
   </script>
 </body>
 
