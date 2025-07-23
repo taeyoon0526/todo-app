@@ -5,28 +5,14 @@
       "runtime": "nodejs18.x"
     }
   },
-  "builds": [
-    {
-      "src": "index.html",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "scripts/**/*.js",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "styles.css",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "admin/**/*.html",
-      "use": "@vercel/static"
-    }
-  ],
   "rewrites": [
     {
       "source": "/api/(.*)",
       "destination": "/api/$1"
+    },
+    {
+      "source": "/admin/(.*)",
+      "destination": "/admin/$1"
     },
     {
       "source": "/(.*)",
