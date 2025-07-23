@@ -234,6 +234,25 @@
   </div>
 
   <script>
+    // 환경에 따른 API URL 자동 설정
+    function getApiBaseUrl() {
+      const hostname = window.location.hostname;
+      const protocol = window.location.protocol;
+
+      // Vercel 배포 환경
+      if (hostname.includes('vercel.app') || hostname.includes('.app')) {
+        return `${protocol}//${hostname}`;
+      }
+
+      // 로컬 개발 환경
+      if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        return 'http://localhost:3001';
+      }
+
+      // 기타 환경 (현재 호스트 사용)
+      return `${protocol}//${hostname}`;
+    }
+
     // 프록시 기반 API 클라이언트
     class ProxySupabaseClient {
       constructor(baseUrl) {
@@ -332,8 +351,11 @@
       }
     }
 
-    // 클라이언트 초기화
-    const supabase = new ProxySupabaseClient('http://localhost:3001');
+    // 클라이언트 초기화 (환경에 따른 자동 설정)
+    const API_BASE_URL = getApiBaseUrl();
+    const supabase = new ProxySupabaseClient(API_BASE_URL);
+
+    console.log('🚀 API Base URL:', API_BASE_URL);
 
     // 현재 IP 확인
     async function getCurrentIP() {
@@ -360,11 +382,11 @@
         if (result.error) throw result.error;
 
         document.getElementById('connectionStatus').innerHTML =
-          '<span style="color: green;">✅ 프록시 서버 연결 성공</span>';
+          `<span style="color: green;">✅ 연결 성공 (${API_BASE_URL})</span>`;
         return true;
       } catch (error) {
         document.getElementById('connectionStatus').innerHTML =
-          '<span style="color: red;">❌ 연결 실패: ' + error.message + '</span>';
+          `<span style="color: red;">❌ 연결 실패 (${API_BASE_URL}): ${error.message}</span>`;
         return false;
       }
     }
@@ -691,12 +713,12 @@
     window.testConnection = async function () {
       const testResult = document.getElementById('testResult');
       testResult.style.display = 'block';
-      testResult.textContent = '연결 테스트 중...';
+      testResult.textContent = `연결 테스트 중... (${API_BASE_URL})`;
 
       const isConnected = await checkConnection();
       testResult.textContent = isConnected ?
-        '✅ 프록시 서버 연결 성공!' :
-        '❌ 프록시 서버 연결 실패!';
+        `✅ 연결 성공! (${API_BASE_URL})` :
+        `❌ 연결 실패! (${API_BASE_URL})`;
     };
 
     window.testDirectQuery = async function () {

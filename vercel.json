@@ -1,5 +1,10 @@
 {
   "version": 2,
+  "functions": {
+    "api/**/*.js": {
+      "runtime": "nodejs18.x"
+    }
+  },
   "builds": [
     {
       "src": "index.html",
@@ -11,6 +16,10 @@
     },
     {
       "src": "styles.css",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "admin/**/*.html",
       "use": "@vercel/static"
     }
   ],
@@ -90,5 +99,9 @@
         }
       ]
     }
-  ]
+  ],
+  "env": {
+    "NEXT_PUBLIC_SUPABASE_URL": "https://eybuksswxwbvpuyhvocb.supabase.co",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV5YnVrc3N3eHdidnB1eWh2b2NiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI5OTY1ODQsImV4cCI6MjA2ODU3MjU4NH0.QzxQF5sP0ns1cSpZ6cBjN2UK8B-2ccyhZC0Hn_LR9hw"
+  }
 }
