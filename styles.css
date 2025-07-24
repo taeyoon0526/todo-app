@@ -1346,3 +1346,163 @@ select:focus {
     font-size: 13px;
   }
 }
+
+/* ===========================================
+   드래그 앤 드롭 스타일
+   =========================================== */
+
+/* 드래그 핸들 */
+.drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-right: 8px;
+  cursor: grab;
+  color: var(--text-muted);
+  opacity: 0.6;
+  transition: opacity 0.2s ease, color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.drag-handle:hover {
+  opacity: 1;
+  color: var(--text-secondary);
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.drag-handle .material-icons {
+  font-size: 16px;
+}
+
+/* TODO 항목 드래그 상태 */
+.todo-item {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+  position: relative;
+}
+
+.todo-item.dragging {
+  transform: rotate(3deg) scale(1.02);
+  box-shadow: var(--shadow-primary);
+  opacity: 0.9;
+  z-index: 1000;
+  background: var(--bg-card);
+  border: 2px solid var(--accent-primary);
+}
+
+.todo-item[draggable="true"] {
+  cursor: move;
+}
+
+/* 드래그 placeholder */
+.drag-placeholder {
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  border: 2px dashed var(--accent-primary);
+  border-radius: 8px;
+  margin: 4px 0;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.7;
+  animation: placeholderPulse 1.5s ease-in-out infinite;
+}
+
+.placeholder-content {
+  color: var(--text-inverse);
+  font-weight: 500;
+  font-size: 14px;
+  text-align: center;
+  padding: 0 16px;
+}
+
+@keyframes placeholderPulse {
+
+  0%,
+  100% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.9;
+    transform: scale(1.02);
+  }
+}
+
+/* 드래그 비활성화 상태 */
+.drag-disabled .todo-item {
+  cursor: default !important;
+}
+
+.drag-disabled .drag-handle {
+  opacity: 0.3;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* 모바일 터치 드래그 최적화 */
+@media (max-width: 768px) {
+  .drag-handle {
+    width: 28px;
+    height: 28px;
+    margin-right: 12px;
+  }
+
+  .drag-handle .material-icons {
+    font-size: 18px;
+  }
+
+  .todo-item.dragging {
+    transform: rotate(2deg) scale(1.05);
+  }
+
+  .drag-placeholder {
+    min-height: 70px;
+    margin: 8px 0;
+  }
+
+  .placeholder-content {
+    font-size: 16px;
+    padding: 0 20px;
+  }
+}
+
+/* 다크 모드 드래그 앤 드롭 스타일 */
+[data-theme="dark"] .todo-item.dragging {
+  border-color: var(--accent-secondary);
+  box-shadow: 0 8px 32px rgba(90, 209, 230, 0.3);
+}
+
+[data-theme="dark"] .drag-placeholder {
+  border-color: var(--accent-secondary);
+  background: linear-gradient(135deg, var(--accent-secondary), var(--accent-primary));
+}
+
+/* 접근성 개선 */
+.drag-handle[tabindex="0"]:focus {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* 드래그 상태 표시 */
+.todo-list.drag-active {
+  background: rgba(108, 99, 255, 0.05);
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+
+/* 드래그 중 다른 항목들 스타일 */
+.todo-item:not(.dragging):not(.drag-placeholder) {
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.todo-list.drag-active .todo-item:not(.dragging):not(.drag-placeholder) {
+  opacity: 0.7;
+  transform: scale(0.98);
+}

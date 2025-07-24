@@ -10,7 +10,7 @@
  */
 
 // scripts/main.js
-import { supabase, saveUserInfo } from "./api.js";
+import { supabase, saveUserInfo, createTodoSecure, updateTodoSecure, deleteTodoSecure } from "./api.js";
 import { getDDay, getDDayClass, convertToUTCISO, convertFromUTCISO, isValidDate } from "./utils.js";
 import AuthUtils from './authUtils.js';
 import { 
@@ -26,6 +26,8 @@ import { initializeAuthGuard } from "./auth-guard.js";
 import { skeletonLoader } from "../components/LoadingSkeleton.js";
 import { errorToast } from "../components/ErrorToast.js";
 import { visitorTracker } from "./visitor-tracker.js";
+import { dragDropManager, updateDragDropState } from "./dragdrop.js";
+import { csrfProtection, XSSProtection } from "./security.js";
 
 // 다크 모드 관리 시스템
 const ThemeManager = {
@@ -1106,6 +1108,9 @@ function showTodoApp(userId) {
   // 검색 기능 초기화
   setupSearchSystem(userId);
   
+  // 드래그 앤 드롭 초기화
+  dragDropManager.init(userId);
+  
   // 할 일 목록 비동기 로드 (UI 차단 방지)
   loadTodos(userId).catch(error => {
     console.error("할 일 목록 로드 실패:", error);
@@ -1199,6 +1204,15 @@ if (addForm) {
     
     if (!title) return;
     
+    // XSS 방지를 위한 입력 정화
+    const sanitizedTitle = XSSProtection.sanitizeInput(title, 500);
+    if (!sanitizedTitle.trim()) {
+      errorToast.warning("유효한 제목을 입력해주세요.", {
+        title: '입력 오류'
+      });
+      return;
+    }
+    
     // 마감일 유효성 검사
     if (dueDateLocal && !isValidDate(dueDateLocal)) {
       errorToast.warning("올바른 날짜를 입력해주세요.", {
@@ -1219,30 +1233,41 @@ if (addForm) {
       return;
     }
     
-    const { error } = await supabase.from("todos").insert({
-      user_id: user.id,
-      title,
-      status: 'pending', // status 컬럼 사용
-      due_date,
-      priority,
-    });
+    try {
+      // 보안 강화된 TODO 생성 함수 사용
+      const { error } = await createTodoSecure({
+        user_id: user.id,
+        title: sanitizedTitle,
+        status: 'pending', // status 컬럼 사용
+        due_date,
+        priority,
+        display_order: 0
+      });
     
-    if (handleAuthError(error)) return;
-    if (error) {
-      errorToast.error(`TODO 추가 실패: ${error.message}`, {
-        title: '추가 오류'
+      if (handleAuthError(error)) return;
+      if (error) {
+        errorToast.error(`TODO 추가 실패: ${error.message}`, {
+          title: '추가 오류'
+        });
+        return;
+      }
+    
+      // 성공 메시지
+      errorToast.success("TODO가 성공적으로 추가되었습니다!", {
+        duration: 2000
+      });
+    
+      input.value = "";
+      dueInput.value = "";
+      prioInput.value = "중간";
+      
+    } catch (securityError) {
+      console.error('[SECURITY] TODO 생성 보안 오류:', securityError);
+      errorToast.error("보안 검증에 실패했습니다. 다시 시도해주세요.", {
+        title: '보안 오류'
       });
       return;
     }
-    
-    // 성공 메시지
-    errorToast.success("TODO가 성공적으로 추가되었습니다!", {
-      duration: 2000
-    });
-    
-    input.value = "";
-    dueInput.value = "";
-    prioInput.value = "중간";
     
     // MDL 텍스트필드 초기화
     const textfields = document.querySelectorAll('.mdl-textfield');
@@ -1333,6 +1358,9 @@ export async function loadTodos(userId) {
   if (currentSort === "priority") {
     // 우선순위 정렬: 높음(1) -> 중간(2) -> 낮음(3) 순서로 매핑하여 정렬
     queryWithSort = queryWithSort.order("priority", { ascending: sortDirection === "asc" });
+  } else {
+    // 기본 정렬: display_order 우선, 그 다음 마감일, 생성일 순
+    queryWithSort = queryWithSort.order("display_order", { ascending: true, nullsFirst: false });
   }
   
   const { data, error } = await queryWithSort
@@ -1388,6 +1416,9 @@ export async function loadTodos(userId) {
     if (isCompleted) {
       li.classList.add('completed');
     }
+    
+    // 드래그 앤 드롭 기능 추가
+    dragDropManager.makeDraggable(li, todo.id);
     
     // 체크박스
     const checkbox = document.createElement("input");
@@ -1815,6 +1846,13 @@ function setupMobileFAB(userId) {
     
     if (!title) return;
     
+    // XSS 방지를 위한 입력 정화
+    const sanitizedTitle = XSSProtection.sanitizeInput(title, 500);
+    if (!sanitizedTitle.trim()) {
+      alert("유효한 제목을 입력해주세요.");
+      return;
+    }
+    
     // 마감일 유효성 검사
     if (dueDateLocal && !isValidDate(dueDateLocal)) {
       alert("올바른 날짜를 입력해주세요.");
@@ -1831,22 +1869,31 @@ function setupMobileFAB(userId) {
       return;
     }
     
-    const { error } = await supabase.from("todos").insert({
-      user_id: user.id,
-      title,
-      status: 'pending',
-      due_date,
-      priority,
-    });
+    try {
+      // 보안 강화된 TODO 생성 함수 사용
+      const { error } = await createTodoSecure({
+        user_id: user.id,
+        title: sanitizedTitle,
+        status: 'pending',
+        due_date,
+        priority,
+        display_order: 0
+      });
     
-    if (handleAuthError(error)) return;
-    if (error) {
-      alert("추가 실패: " + error.message);
+      if (handleAuthError(error)) return;
+      if (error) {
+        alert("추가 실패: " + error.message);
+        return;
+      }
+    
+      closeModal();
+      await loadTodos(userId);
+      
+    } catch (securityError) {
+      console.error('[SECURITY] 모바일 TODO 생성 보안 오류:', securityError);
+      alert("보안 검증에 실패했습니다. 다시 시도해주세요.");
       return;
     }
-    
-    closeModal();
-    await loadTodos(userId);
   });
 }
 
@@ -1986,6 +2033,11 @@ function setCurrentFilter(filter, userId, debouncedFilter = null) {
   }
   
   console.log(`[FILTER] 필터 변경: ${filter}`);
+  
+  // 드래그 앤 드롭 상태 업데이트
+  if (window.dragDropManager) {
+    dragDropManager.updateDragDropState(filter);
+  }
   
   // 할 일 목록 다시 로드 (디바운스 적용)
   if (debouncedFilter) {
