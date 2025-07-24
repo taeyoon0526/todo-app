@@ -479,6 +479,9 @@
   </script>
   <script type="module" src="scripts/main.js"></script>
 
+    <!-- Main Application Script -->
+  <script nonce="todolist2025" type="module" src="scripts/main.js"></script>
+
   <!-- 토스트 메시지 컨테이너 -->
   <div id="toast-container" class="toast-container">
     <div id="toast-message" class="toast-message hidden">
@@ -488,6 +491,34 @@
       </button>
     </div>
   </div>
+
+  <!-- 애널리틱스 및 피드백 시스템 -->
+  <script nonce="todolist2025" src="scripts/analytics.js"></script>
+  <script nonce="todolist2025" type="module" src="scripts/feedback.js"></script>
+
+  <!-- 방문자 추적 시스템 (활성화) -->
+  <script nonce="todolist2025" type="module" src="scripts/visitor-tracker.js"></script>
+
+  <!-- 방문자 추적 테스트 도구 (개발용) -->
+  <script nonce="todolist2025" src="scripts/visitor-tracker-test.js"></script>
+
+  <!-- QA 테스트 도구 (개발/테스트 환경에서만) -->
+  <script nonce="todolist2025" src="scripts/mobile-qa-test.js"></script>
+
+  <script nonce="todolist2025">
+    // 서비스 워커 등록
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then((registration) => {
+            console.log('[PWA] Service Worker registered:', registration);
+          })
+          .catch((error) => {
+            console.log('[PWA] Service Worker registration failed:', error);
+          });
+      });
+    }
+  </script>
 
   <!-- 애널리틱스 및 피드백 시스템 -->
   <script src="scripts/analytics.js"></script>
