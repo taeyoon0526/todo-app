@@ -2233,6 +2233,11 @@ async function handleGoogleAuth() {
                 console.warn("[WARN] 구글 로그인 - 사용자 정보 저장 실패:", saveResult.error);
               }
               
+              // 메인 창에 로그인 성공 이벤트 디스패치
+              window.dispatchEvent(new CustomEvent('login-success', {
+                detail: { user: session.user }
+              }));
+              
               showTodoApp(session.user.id);
               resolve(true);
               return;
@@ -2253,6 +2258,12 @@ async function handleGoogleAuth() {
                 
                 if (AuthUtils.validateSession(session)) {
                   console.log('[AUTH] 지연된 로그인 감지! 사용자:', session.user.email);
+                  
+                  // 메인 창에 로그인 성공 이벤트 디스패치
+                  window.dispatchEvent(new CustomEvent('login-success', {
+                    detail: { user: session.user }
+                  }));
+                  
                   showTodoApp(session.user.id);
                   resolve(true);
                 } else if (attempts < maxAttempts) {
