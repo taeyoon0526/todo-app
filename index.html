@@ -476,6 +476,48 @@
         window.showTodoApp(userId);
       }
     });
+
+    // 구글 로그인 버튼 이벤트 리스너 추가
+    document.addEventListener('DOMContentLoaded', async () => {
+      const googleSignupBtn = document.getElementById('google-signup');
+      const googleLoginBtn = document.getElementById('google-login');
+
+      if (googleSignupBtn) {
+        googleSignupBtn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          console.log('구글 회원가입 버튼 클릭됨');
+
+          // main.js에서 handleGoogleAuth 함수를 호출
+          if (window.handleGoogleAuth) {
+            try {
+              await window.handleGoogleAuth();
+            } catch (error) {
+              console.error('구글 회원가입 오류:', error);
+            }
+          } else {
+            console.error('handleGoogleAuth 함수를 찾을 수 없습니다');
+          }
+        });
+      }
+
+      if (googleLoginBtn) {
+        googleLoginBtn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          console.log('구글 로그인 버튼 클릭됨');
+
+          // main.js에서 handleGoogleAuth 함수를 호출
+          if (window.handleGoogleAuth) {
+            try {
+              await window.handleGoogleAuth();
+            } catch (error) {
+              console.error('구글 로그인 오류:', error);
+            }
+          } else {
+            console.error('handleGoogleAuth 함수를 찾을 수 없습니다');
+          }
+        });
+      }
+    });
   </script>
 
   <!-- Main Application Script -->
@@ -505,34 +547,6 @@
   <script nonce="todolist2025" src="scripts/mobile-qa-test.js"></script>
 
   <script nonce="todolist2025">
-    // 서비스 워커 등록
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then((registration) => {
-            console.log('[PWA] Service Worker registered:', registration);
-          })
-          .catch((error) => {
-            console.log('[PWA] Service Worker registration failed:', error);
-          });
-      });
-    }
-  </script>
-
-  <!-- 애널리틱스 및 피드백 시스템 -->
-  <script src="scripts/analytics.js"></script>
-  <script type="module" src="scripts/feedback.js"></script>
-
-  <!-- 방문자 추적 시스템 (활성화) -->
-  <script type="module" src="scripts/visitor-tracker.js"></script>
-
-  <!-- 방문자 추적 테스트 도구 (개발용) -->
-  <script src="scripts/visitor-tracker-test.js"></script>
-
-  <!-- QA 테스트 도구 (개발/테스트 환경에서만) -->
-  <script src="scripts/mobile-qa-test.js"></script>
-
-  <script>
     // 서비스 워커 등록
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {

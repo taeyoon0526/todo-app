@@ -2324,5 +2324,9 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('[MAIN] visitorTracker 전역 등록 완료 (백업)');
   }
   
+  // 구글 로그인 함수를 전역에 노출
+  window.handleGoogleAuth = handleGoogleAuth;
+  console.log('[MAIN] handleGoogleAuth 함수 전역 노출 완료');
+  
   console.log('[AUTH] 구글 OAuth 버튼 이벤트 리스너 등록 완료');
 });
