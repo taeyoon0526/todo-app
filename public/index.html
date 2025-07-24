@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="현대적인 웹 기반 할 일 관리 애플리케이션" />
+  <meta name="author" content="taeyoon0526" />
+  <meta name="license" content="Shared Source License - See LICENSE file" />
+
+  <!-- PWA 설정 -->
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#6c63ff" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="TODO-LIST" />
+  <link rel="apple-touch-icon" href="icon.png" />
+  <title>TODO-LIST</title>
+  <link rel="stylesheet" href="styles.css" />
+  <!-- Material Design Lite -->
+  <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.indigo-pink.min.css" />
+  <!-- Material Icons -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+  <!-- Day.js for date calculations -->
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.10/dayjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.10/plugin/utc.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.10/plugin/timezone.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.10/plugin/relativeTime.js"></script>
+  <script defer src="https://code.getmdl.io/1.3.0/material.min.js"></script>
+</head>
+
+<body>
+  <div class="mdl-layout mdl-js-layout mdl-layout--fixed-header">
+    <header class="mdl-layout__header">
+      <div class="mdl-layout__header-row">
+        <span class="mdl-layout-title">TODO-LIST</span>
+        <div class="mdl-layout-spacer"></div>
+        <nav class="mdl-navigation">
+          <button id="theme-toggle" class="mdl-button mdl-js-button mdl-js-ripple-effect theme-toggle-btn"
+            title="다크 모드 토글" aria-label="테마 변경" role="button">
+            <i class="material-icons theme-icon">brightness_6</i>
+          </button>
+          <button id="feedback-trigger" class="mdl-button mdl-js-button mdl-js-ripple-effect" title="피드백 보내기"
+            data-feedback-trigger="true">
+            <i class="material-icons">feedback</i>
+          </button>
+          <button id="logout-button" class="mdl-button mdl-js-button mdl-js-ripple-effect logout-btn" title="로그아웃">
+            <i class="material-icons">logout</i>
+            <span class="logout-text">로그아웃</span>
+          </button>
+        </nav>
+      </div>
+    </header>
+    <main class="mdl-layout__content">
+      <div id="app" class="mdl-shadow--4dp">
+        <div id="auth-section">
+          <div class="mdl-tabs mdl-js-tabs mdl-js-ripple-effect">
+            <div class="mdl-tabs__tab-bar">
+              <a href="#signup-panel" class="mdl-tabs__tab is-active">회원가입</a>
+              <a href="#login-panel" class="mdl-tabs__tab">로그인</a>
+            </div>
+
+            <div class="mdl-tabs__panel is-active" id="signup-panel">
+              <form id="signup-form" class="mdl-grid">
+                <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label mdl-cell mdl-cell--12-col">
+                  <input type="email" id="signup-email" class="mdl-textfield__input" required />
+                  <label class="mdl-textfield__label" for="signup-email">이메일</label>
+                  <span class="mdl-textfield__error" id="signup-email-error">유효한 이메일을 입력하세요</span>
+                </div>
+                <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label mdl-cell mdl-cell--12-col">
+                  <input type="password" id="signup-password" class="mdl-textfield__input" minlength="8" required />
+                  <label class="mdl-textfield__label" for="signup-password">비밀번호 (8자 이상, 영문+숫자)</label>
+                  <span class="mdl-textfield__error" id="signup-password-error">8자 이상, 영문과 숫자를 포함해야 합니다</span>
+                </div>
+                <button type="submit"
+                  class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored mdl-cell mdl-cell--12-col">
+                  회원가입
+                </button>
+
+                <!-- 구분선 -->
+                <div class="mdl-cell mdl-cell--12-col auth-divider">
+                  <span>또는</span>
+                </div>
+
+                <!-- 구글 로그인 버튼 -->
+                <button type="button" id="google-signup"
+                  class="mdl-button mdl-js-button mdl-button--raised google-login-btn mdl-cell mdl-cell--12-col mdl-js-ripple-effect">
+                  <svg class="google-icon" viewBox="0 0 24 24" width="18" height="18">
+                    <path fill="#4285F4"
+                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                    <path fill="#34A853"
+                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                    <path fill="#FBBC05"
+                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                    <path fill="#EA4335"
+                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                  </svg>
+                  구글로 계정 만들기
+                </button>
+              </form>
+            </div>
+
+            <div class="mdl-tabs__panel" id="login-panel">
+              <form id="login-form" class="mdl-grid">
+                <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label mdl-cell mdl-cell--12-col">
+                  <input type="email" id="login-email" class="mdl-textfield__input" required />
+                  <label class="mdl-textfield__label" for="login-email">이메일</label>
+                  <span class="mdl-textfield__error" id="login-email-error">유효한 이메일을 입력하세요</span>
+                </div>
+                <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label mdl-cell mdl-cell--12-col">
+                  <input type="password" id="login-password" class="mdl-textfield__input" required />
+                  <label class="mdl-textfield__label" for="login-password">비밀번호</label>
+                  <span class="mdl-textfield__error" id="login-password-error">비밀번호를 입력하세요</span>
+                </div>
+                <button type="submit"
+                  class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored mdl-cell mdl-cell--12-col">
+                  로그인
+                </button>
+
+                <!-- 구분선 -->
+                <div class="mdl-cell mdl-cell--12-col auth-divider">
+                  <span>또는</span>
+                </div>
+
+                <!-- 구글 로그인 버튼 -->
+                <button type="button" id="google-login"
+                  class="mdl-button mdl-js-button mdl-button--raised google-login-btn mdl-cell mdl-cell--12-col mdl-js-ripple-effect">
+                  <svg class="google-icon" viewBox="0 0 24 24" width="18" height="18">
+                    <path fill="#4285F4"
+                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                    <path fill="#34A853"
+                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                    <path fill="#FBBC05"
+                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                    <path fill="#EA4335"
+                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                  </svg>
+                  구글로 로그인
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <div id="todo-app" class="todo-app-hidden">
+          <div class="mdl-card mdl-shadow--2dp todo-card">
+            <div class="mdl-card__title">
+              <h2 class="mdl-card__title-text">나의 할 일 목록</h2>
+            </div>
+            <div class="mdl-card__supporting-text">
+              <div id="todo-filter" class="filter-tabs">
+                <button type="button"
+                  class="filter-btn mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect"
+                  data-filter="today">
+                  오늘
+                </button>
+                <button type="button"
+                  class="filter-btn mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect"
+                  data-filter="week">
+                  이번 주
+                </button>
+                <button type="button"
+                  class="filter-btn mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect" data-filter="all">
+                  전체
+                </button>
+                <button type="button" id="toggle-completed"
+                  class="filter-btn mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect"
+                  data-toggle="false">
+                  완료 보기
+                </button>
+                <button type="button" id="sort-priority"
+                  class="filter-btn mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect" title="우선순위별 정렬">
+                  <i class="material-icons">sort</i>
+                  우선순위
+                </button>
+                <button type="button" id="notification-settings"
+                  class="filter-btn mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect" title="알림 설정"
+                  onclick="showNotificationSettings()">
+                  <i class="material-icons">notifications</i>
+                  알림
+                </button>
+              </div>
+
+              <form id="todo-add-form" class="mdl-grid todo-form">
+                <div
+                  class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label mdl-cell mdl-cell--6-col mdl-cell--8-col-tablet mdl-cell--12-col-phone">
+                  <input type="text" id="todo-input" class="mdl-textfield__input" required />
+                  <label class="mdl-textfield__label" for="todo-input">할 일을 입력하세요</label>
+                </div>
+                <div
+                  class="mdl-textfield mdl-js-textfield mdl-cell mdl-cell--3-col mdl-cell--4-col-tablet mdl-cell--6-col-phone date-field">
+                  <input type="date" id="todo-due" class="mdl-textfield__input" />
+                  <label class="mdl-textfield__label" for="todo-due">마감일</label>
+                </div>
+                <div
+                  class="mdl-textfield mdl-js-textfield mdl-cell mdl-cell--2-col mdl-cell--4-col-tablet mdl-cell--6-col-phone priority-field">
+                  <select id="todo-priority" class="mdl-textfield__input" title="우선순위 선택">
+                    <option value="높음">높음</option>
+                    <option value="중간" selected>중간</option>
+                    <option value="낮음">낮음</option>
+                  </select>
+                  <label class="mdl-textfield__label">우선순위</label>
+                </div>
+                <div class="mdl-cell mdl-cell--1-col mdl-cell--12-col-tablet mdl-cell--12-col-phone add-button-cell">
+                  <button type="submit"
+                    class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--colored mdl-js-ripple-effect">
+                    <i class="material-icons">add</i>
+                  </button>
+                </div>
+              </form>
+
+              <ul id="todo-list" class="todo-list"></ul>
+            </div>
+          </div>
+
+          <!-- FAB for mobile quick add -->
+          <button id="mobile-fab"
+            class="mdl-button mdl-js-button mdl-button--fab mdl-js-ripple-effect mdl-button--colored mobile-fab"
+            title="빠른 작업 추가" aria-label="작업 추가">
+            <i class="material-icons">add</i>
+          </button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- 모바일 작업 추가 모달 -->
+  <div id="mobile-add-modal" class="mobile-add-modal">
+    <div class="mobile-add-content">
+      <h3>새 작업 추가</h3>
+      <form id="mobile-add-form" class="mobile-add-form">
+        <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+          <input type="text" id="mobile-todo-input" class="mdl-textfield__input" required />
+          <label class="mdl-textfield__label" for="mobile-todo-input">할 일을 입력하세요</label>
+        </div>
+        <div class="mdl-textfield mdl-js-textfield">
+          <input type="date" id="mobile-todo-due" class="mdl-textfield__input" />
+          <label class="mdl-textfield__label" for="mobile-todo-due">마감일</label>
+        </div>
+        <div class="mdl-textfield mdl-js-textfield">
+          <select id="mobile-todo-priority" class="mdl-textfield__input" title="우선순위 선택">
+            <option value="높음">높음</option>
+            <option value="중간" selected>중간</option>
+            <option value="낮음">낮음</option>
+          </select>
+          <label class="mdl-textfield__label">우선순위</label>
+        </div>
+        <div class="mobile-add-buttons">
+          <button type="button" id="mobile-cancel-btn" class="mdl-button mdl-js-button mdl-js-ripple-effect">
+            취소
+          </button>
+          <button type="submit"
+            class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored mdl-js-ripple-effect">
+            추가
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <script type="module">
+    console.log("폼 이벤트 연결 시도");
+    import { signUpHandler, signInHandler, validateEmail, validatePassword } from "./scripts/auth.js";
+
+    // 회원가입 폼 유효성 검사 및 버튼 활성화/비활성화
+    const signupForm = document.getElementById("signup-form");
+    const signupEmail = document.getElementById("signup-email");
+    const signupPassword = document.getElementById("signup-password");
+    const signupButton = signupForm.querySelector('button[type="submit"]');
+    const signupEmailError = document.getElementById("signup-email-error");
+    const signupPasswordError = document.getElementById("signup-password-error");
+
+    // 디바운싱을 위한 타이머
+    let emailCheckTimer;
+
+    function showFieldError(field, errorElement, message) {
+      field.parentElement.classList.add("is-invalid");
+      errorElement.textContent = message;
+    }
+
+    function hideFieldError(field, errorElement) {
+      field.parentElement.classList.remove("is-invalid");
+    }
+
+    function validateSignupForm() {
+      const email = signupEmail.value.trim();
+      const password = signupPassword.value;
+
+      let emailValid = false;
+      let passwordValid = false;
+
+      // 이메일 유효성 검사
+      if (email) {
+        if (validateEmail(email)) {
+          hideFieldError(signupEmail, signupEmailError);
+          emailValid = true;
+        } else {
+          showFieldError(signupEmail, signupEmailError, "유효한 이메일 형식이 아닙니다");
+        }
+      } else {
+        hideFieldError(signupEmail, signupEmailError);
+      }
+
+      // 비밀번호 유효성 검사
+      if (password) {
+        if (validatePassword(password)) {
+          hideFieldError(signupPassword, signupPasswordError);
+          passwordValid = true;
+        } else {
+          showFieldError(signupPassword, signupPasswordError, "8자 이상, 영문과 숫자를 포함해야 합니다");
+        }
+      } else {
+        hideFieldError(signupPassword, signupPasswordError);
+      }
+
+      signupButton.disabled = !(emailValid && passwordValid);
+    }
+
+    signupEmail.addEventListener("input", (e) => {
+      validateSignupForm();
+
+      // 이메일 중복 체크 (디바운싱)
+      clearTimeout(emailCheckTimer);
+      const email = e.target.value.trim();
+
+      if (email && validateEmail(email)) {
+        emailCheckTimer = setTimeout(async () => {
+          // 실제 사용 시에는 이메일 중복 체크를 여기서 구현
+          // 현재는 회원가입 시도 시에만 체크
+        }, 500);
+      }
+    });
+
+    signupPassword.addEventListener("input", validateSignupForm);
+    validateSignupForm(); // 초기 상태 설정
+
+    // 로그인 폼 유효성 검사 및 버튼 활성화/비활성화
+    const loginForm = document.getElementById("login-form");
+    const loginEmail = document.getElementById("login-email");
+    const loginPassword = document.getElementById("login-password");
+    const loginButton = loginForm.querySelector('button[type="submit"]');
+    const loginEmailError = document.getElementById("login-email-error");
+    const loginPasswordError = document.getElementById("login-password-error");
+
+    function validateLoginForm() {
+      const email = loginEmail.value.trim();
+      const password = loginPassword.value.trim();
+
+      let emailValid = false;
+      let passwordValid = false;
+
+      // 이메일 유효성 검사
+      if (email) {
+        if (validateEmail(email)) {
+          hideFieldError(loginEmail, loginEmailError);
+          emailValid = true;
+        } else {
+          showFieldError(loginEmail, loginEmailError, "유효한 이메일 형식이 아닙니다");
+        }
+      } else {
+        hideFieldError(loginEmail, loginEmailError);
+      }
+
+      // 비밀번호 검사 (로그인은 입력만 확인)
+      if (password) {
+        hideFieldError(loginPassword, loginPasswordError);
+        passwordValid = true;
+      } else {
+        hideFieldError(loginPassword, loginPasswordError);
+      }
+
+      loginButton.disabled = !(emailValid && passwordValid);
+    }
+
+    loginEmail.addEventListener("input", validateLoginForm);
+    loginPassword.addEventListener("input", validateLoginForm);
+    validateLoginForm(); // 초기 상태 설정
+
+    signupForm.onsubmit = async (e) => {
+      console.log("회원가입 submit 이벤트 발생");
+      e.preventDefault();
+
+      const email = signupEmail.value.trim();
+      const password = signupPassword.value;
+
+      // 최종 유효성 검사
+      if (!validateEmail(email)) {
+        showFieldError(signupEmail, signupEmailError, "유효한 이메일을 입력하세요");
+        return;
+      }
+
+      if (!validatePassword(password)) {
+        showFieldError(signupPassword, signupPasswordError, "8자 이상, 영문과 숫자를 포함해야 합니다");
+        return;
+      }
+
+      // 회원가입 버튼 비활성화 (중복 요청 방지)
+      signupButton.disabled = true;
+      signupButton.textContent = "회원가입 중...";
+
+      try {
+        const success = await signUpHandler(email, password);
+        if (success) {
+          // 회원가입 및 자동 로그인 성공 시 폼 초기화
+          signupForm.reset();
+          hideFieldError(signupEmail, signupEmailError);
+          hideFieldError(signupPassword, signupPasswordError);
+          validateSignupForm();
+        }
+      } catch (error) {
+        console.error("[SIGNUP] 회원가입 처리 중 오류:", error);
+      } finally {
+        // 버튼 상태 복원
+        signupButton.disabled = false;
+        signupButton.textContent = "회원가입";
+        validateSignupForm(); // 버튼 상태 재검증
+      }
+    };
+
+    loginForm.onsubmit = async (e) => {
+      console.log("로그인 submit 이벤트 발생");
+      e.preventDefault();
+
+      const email = loginEmail.value.trim();
+      const password = loginPassword.value.trim();
+
+      // 최종 유효성 검사
+      if (!email) {
+        showFieldError(loginEmail, loginEmailError, "이메일을 입력하세요");
+        return;
+      }
+
+      if (!validateEmail(email)) {
+        showFieldError(loginEmail, loginEmailError, "유효한 이메일을 입력하세요");
+        return;
+      }
+
+      if (!password) {
+        showFieldError(loginPassword, loginPasswordError, "비밀번호를 입력하세요");
+        return;
+      }
+
+      // 로그인 버튼 비활성화 (중복 요청 방지)
+      loginButton.disabled = true;
+      loginButton.textContent = "로그인 중...";
+
+      try {
+        const success = await signInHandler(email, password);
+        if (success) {
+          // 로그인 성공 시 폼 초기화
+          loginForm.reset();
+          hideFieldError(loginEmail, loginEmailError);
+          hideFieldError(loginPassword, loginPasswordError);
+          validateLoginForm();
+        }
+      } catch (error) {
+        console.error("[LOGIN] 로그인 처리 중 오류:", error);
+      } finally {
+        // 버튼 상태 복원
+        loginButton.disabled = false;
+        loginButton.textContent = "로그인";
+        validateLoginForm(); // 버튼 상태 재검증
+      }
+    };
+
+    // 로그인 성공 이벤트 리스너 추가
+    window.addEventListener("login-success", (e) => {
+      const userId = e.detail.user.id;
+      console.log("로그인 성공 이벤트 수신, 사용자 ID:", userId);
+
+      // 인증 섹션 숨기고 앱 섹션 표시
+      document.getElementById("auth-section").style.display = "none";
+      document.getElementById("app-section").style.display = "block";
+
+      // main.js의 showTodoApp 함수 호출
+      if (window.showTodoApp) {
+        window.showTodoApp(userId);
+      }
+    });
+  </script>
+  <script type="module" src="scripts/main.js"></script>
+
+  <!-- 토스트 메시지 컨테이너 -->
+  <div id="toast-container" class="toast-container">
+    <div id="toast-message" class="toast-message hidden">
+      <span id="toast-text"></span>
+      <button id="toast-close" class="toast-close" aria-label="닫기">
+        <i class="material-icons">close</i>
+      </button>
+    </div>
+  </div>
+
+  <!-- 애널리틱스 및 피드백 시스템 -->
+  <script src="scripts/analytics.js"></script>
+  <script type="module" src="scripts/feedback.js"></script>
+
+  <!-- 방문자 추적 시스템 (활성화) -->
+  <script type="module" src="scripts/visitor-tracker.js"></script>
+
+  <!-- 방문자 추적 테스트 도구 (개발용) -->
+  <script src="scripts/visitor-tracker-test.js"></script>
+
+  <!-- QA 테스트 도구 (개발/테스트 환경에서만) -->
+  <script src="scripts/mobile-qa-test.js"></script>
+
+  <script>
+    // 서비스 워커 등록
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then((registration) => {
+            console.log('[PWA] Service Worker registered:', registration);
+          })
+          .catch((error) => {
+            console.log('[PWA] Service Worker registration failed:', error);
+          });
+      });
+    }
+  </script>
+</body>
+
+</html>
